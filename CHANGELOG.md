@@ -1,5 +1,29 @@
 # Changelog
 
+## 0.7.0 — C# console capture, notebook-relative paths (NuGet packages 0.3.0)
+
+Found while moving the Numbers repo's notebooks (`D:\Dev\2027\repos\Numbers`) to JupyterNet.
+
+- **`Console.Out`/`Error` in C# cells are now captured**, the way `FSharpKernel` already did for
+  `printfn`. Before, a C# cell's `Console.WriteLine` went to the real process stdout: missing from
+  the CLI's saved notebook, and — in `JupyterNet.Host` — written raw into the NDJSON channel. The
+  new `ConsoleCapture` swaps the console for exactly one cell and also wraps the sink, so (1)
+  console text is flushed as one text output right before any `Display.*` output, the result or an
+  error, keeping the order the cell produced them in, and (2) writes a *sink* makes while handling
+  an output (the CLI echoes every output to the console) pass straight through instead of being
+  captured back as a duplicate.
+- **Relative `#r`/`#load` resolve against the notebook's folder.** `CSharpKernel(notebookPath)`
+  compiles every cell with `ScriptOptions.WithFilePath(notebookPath)` — the same thing Screen9's
+  `CsxRunner` does for a `.csx` — so Roslyn resolves relative directives against the notebook, and
+  inside a `#load`ed file against that file's own folder. Before, only absolute paths worked, so
+  notebooks were tied to one machine's layout. Plumbing: `NotebookSession(notebookPath:)` /
+  `NotebookSession.NotebookPath`; the CLI passes the notebook it runs; the protocol's
+  `ExecuteParams` gains an optional `notebookPath` that the extension fills with the document's
+  file path (absent for untitled notebooks) and the host applies before the `csharp` kernel is
+  created. Old extensions/hosts interoperate: the field is optional on both sides.
+- NuGet package versions bumped 0.2.0 → 0.3.0 (they had never followed this changelog's numbering;
+  the bump is what makes `dotnet tool update` pick the new CLI up from the local feed).
+
 ## 0.6.0 — PowerFx kernel, per-language samples
 
 - New builtin **`powerfx`** kernel (`JupyterNet.Kernels.PowerFx`, `Microsoft.PowerFx.Interpreter`):

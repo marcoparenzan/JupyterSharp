@@ -47,7 +47,7 @@ export class HostClient {
         this.pending.get(evt.executionId)?.(evt);
     }
 
-    execute(kernel: string, code: string, cells: NotebookCellSnapshot[], onEvent: (evt: HostEvent) => void): Promise<void> {
+    execute(kernel: string, code: string, cells: NotebookCellSnapshot[], notebookPath: string | undefined, onEvent: (evt: HostEvent) => void): Promise<void> {
         const id = String(this.nextId++);
         return new Promise((resolve) => {
             this.pending.set(id, (evt) => {
@@ -58,7 +58,7 @@ export class HostClient {
                 }
             });
 
-            const params: ExecuteParams = { kernel, code, cells };
+            const params: ExecuteParams = { kernel, code, cells, notebookPath };
             const request: HostRequest = { id, method: "execute", params };
             this.process.stdin.write(JSON.stringify(request) + "\n");
         });

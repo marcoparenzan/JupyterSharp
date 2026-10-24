@@ -30,6 +30,9 @@ while ((line = await stdin.ReadLineAsync()) is not null)
     if (request.Method == "shutdown") break;
     if (request.Method != "execute" || request.Params is null) continue;
 
+    // One host process per notebook: the first request that names the file fixes it for the session's kernels.
+    if (request.Params.NotebookPath is { Length: > 0 } notebookPath) session.NotebookPath ??= notebookPath;
+
     if (request.Params.Cells is not null)
         session.UpdateCells(request.Params.Cells.Select(c => new NotebookCellInfo(c.Index, c.Language, c.Code)).ToList());
 

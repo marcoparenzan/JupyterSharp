@@ -60,6 +60,13 @@ for the first cell, `ScriptState<object>.ContinueWithAsync` for every one after,
 `var`s declared in one cell are visible in the next. `Display.Html`/`Display.Text`
 (an `AsyncLocal<IKernelOutputSink>` set for the duration of `ExecuteAsync`) let a cell push rich
 output explicitly; the last expression's value, if any, is also written as text via `ToString()`.
+`Console.Out`/`Error` are captured for the duration of one cell by `ConsoleCapture` (same scoped swap
+as `FSharpKernel`, same single-threaded constraint): console text is flushed as one text output before
+any other output, so ordering is preserved, and writes made by the sink itself while it handles an
+output (the CLI's echo) pass through to the real console instead of being captured back. Given a
+notebook path (`CSharpKernel(notebookPath)`, from `NotebookSession.NotebookPath`), every cell is
+compiled with `ScriptOptions.WithFilePath`, so relative `#r`/`#load` resolve against the notebook's
+folder (and, inside a `#load`ed file, against that file's folder).
 **Known limit**: no formatter registry like dotnet-interactive's (per-type HTML formatters) —
 v1 only has `ToString()` plus explicit `Display.Html`.
 
@@ -356,8 +363,8 @@ no NDJSON — just a library call.
 - `FSharpKernel` is not safe to run concurrently across threads (it swaps the process-global
   `Console.Out`/`Error`) — see the F# section above. Not an issue for `JupyterNet.Host`/the CLI
   (sequential by design); an embedding host must not run two `NotebookSession`s with `fsharp`
-  kernels on different threads at the same time. `CSharpKernel`/`PowerShellKernel` have no such
-  constraint.
+  kernels on different threads at the same time. Since 0.7.0 the same holds for `CSharpKernel`,
+  which captures the console the same way; `PowerShellKernel` has no such constraint.
 - Builtin kernels share one dependency graph, so adding one can force a version bump in another —
   already happened once (`Microsoft.PowerShell.SDK` forced `Microsoft.CodeAnalysis.CSharp.Scripting`
   from `4.14.0` to `5.9.0`, see the PowerShell section above). Worth re-running the full test suite

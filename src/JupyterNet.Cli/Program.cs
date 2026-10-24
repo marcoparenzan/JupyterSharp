@@ -34,7 +34,7 @@ if (!File.Exists(notebookPath)) { Console.Error.WriteLine($"Notebook not found: 
 
 var document = NotebookDocument.Load(notebookPath);
 var kernelPaths = kernelPathsArg?.Split(Path.PathSeparator, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-var session = new NotebookSession(pluginWarnings: Console.Error, kernelPathsOverride: kernelPaths);
+var session = new NotebookSession(pluginWarnings: Console.Error, kernelPathsOverride: kernelPaths, notebookPath: Path.GetFullPath(notebookPath));
 
 // A "ralf" cell's Notebook_SetCellCode tool reaches here — no editor to apply a WorkspaceEdit to,
 // so it just updates this run's in-memory NotebookDocument directly.

@@ -113,7 +113,8 @@ export class JupyterNetController implements vscode.Disposable {
         // individually) so a burst of quick events — the "ralf" kernel's progress lines in
         // particular — lands in the editor in the order the host sent it.
         let chain: Promise<void> = Promise.resolve();
-        await client.execute(cell.document.languageId, cell.document.getText(), this.snapshotCells(notebook), (evt: HostEvent) => {
+        const notebookPath = notebook.uri.scheme === "file" ? notebook.uri.fsPath : undefined;
+        await client.execute(cell.document.languageId, cell.document.getText(), this.snapshotCells(notebook), notebookPath, (evt: HostEvent) => {
             chain = chain.then(async () => {
                 const item = this.toOutputItem(evt);
                 if (item) await execution.appendOutput(new vscode.NotebookCellOutput([item]));

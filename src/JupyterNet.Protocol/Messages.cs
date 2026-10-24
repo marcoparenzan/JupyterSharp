@@ -25,9 +25,11 @@ public sealed record NotebookCellSnapshot(int Index, string Language, string Cod
 /// Parameters of an "execute" request: which kernel, the cell's source text, and — sent with
 /// every request, not just "ralf" ones, so the host's notebook cache never goes stale — a
 /// snapshot of every cell currently in the notebook. Only the "ralf" kernel's notebook tools
-/// (<c>Notebook_*</c>) read <see cref="Cells"/>; other kernels ignore it.
+/// (<c>Notebook_*</c>) read <see cref="Cells"/>; other kernels ignore it. <see cref="NotebookPath"/> is the notebook's
+/// file (absent for an untitled notebook): the host uses it so the <c>csharp</c> kernel resolves relative
+/// <c>#r</c>/<c>#load</c> against the notebook's folder.
 /// </summary>
-public sealed record ExecuteParams(string Kernel, string Code, IReadOnlyList<NotebookCellSnapshot>? Cells = null);
+public sealed record ExecuteParams(string Kernel, string Code, IReadOnlyList<NotebookCellSnapshot>? Cells = null, string? NotebookPath = null);
 
 /// <summary>
 /// A request sent by the extension to <c>JupyterNet.Host</c> on stdin, one JSON object per line.

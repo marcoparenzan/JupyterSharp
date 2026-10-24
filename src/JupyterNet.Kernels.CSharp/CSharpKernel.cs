@@ -19,28 +19,44 @@ public sealed class CSharpKernel : IKernel, IVariableInjectable
 
     // Microsoft.CSharp.dll (the DLR runtime binder) is required for `dynamic` to compile in a
     // script submission — only ever exercised by SetVariableAsync's hidden "unwrap" interaction.
-    private static readonly ScriptOptions Options = ScriptOptions.Default
+    private static readonly ScriptOptions BaseOptions = ScriptOptions.Default
         .WithReferences(typeof(object).Assembly, typeof(Enumerable).Assembly, typeof(Display).Assembly,
             typeof(Microsoft.CSharp.RuntimeBinder.Binder).Assembly)
         .WithImports("System", "System.Linq", "System.Collections.Generic", "JupyterNet.Kernels.CSharp");
 
+    private readonly ScriptOptions _options;
+
+    /// <param name="notebookPath">
+    /// The notebook's file path, when there is one. Every cell is compiled as if it lived in that file
+    /// (<see cref="ScriptOptions.WithFilePath"/>, the same thing Screen9's CsxRunner does for a .csx): relative
+    /// <c>#r</c>/<c>#load</c> resolve against the notebook's folder — and inside a <c>#load</c>ed file, against that
+    /// file's folder — instead of failing; diagnostics name the notebook. Without it, only absolute paths resolve.
+    /// </param>
+    public CSharpKernel(string? notebookPath = null)
+    {
+        _options = notebookPath is null ? BaseOptions : BaseOptions.WithFilePath(Path.GetFullPath(notebookPath));
+    }
+
     public async Task ExecuteAsync(string code, IKernelOutputSink sink, CancellationToken cancellationToken)
     {
-        Display.CurrentSink.Value = sink;
+        // Console.WriteLine inside a cell would otherwise reach the real process stdout — lost from the CLI's saved
+        // notebook and, in JupyterNet.Host, written straight into the NDJSON channel. See ConsoleCapture.
+        using var capture = new ConsoleCapture(sink);
+        Display.CurrentSink.Value = capture;
         try
         {
             _state = await RunAsync(code, cancellationToken);
 
             if (_state.ReturnValue is not null)
-                sink.WriteText(_state.ReturnValue is string s ? s : _state.ReturnValue.ToString() ?? "");
+                capture.WriteText(_state.ReturnValue is string s ? s : _state.ReturnValue.ToString() ?? "");
         }
         catch (CompilationErrorException ex)
         {
-            sink.WriteError(string.Join(Environment.NewLine, ex.Diagnostics));
+            capture.WriteError(string.Join(Environment.NewLine, ex.Diagnostics));
         }
         catch (Exception ex)
         {
-            sink.WriteError(ex.Message, ex.StackTrace);
+            capture.WriteError(ex.Message, ex.StackTrace);
         }
         finally
         {
@@ -71,8 +87,8 @@ public sealed class CSharpKernel : IKernel, IVariableInjectable
     }
 
     private Task<ScriptState<object?>> RunAsync(string code, CancellationToken cancellationToken) => _state is null
-        ? CSharpScript.RunAsync(code, Options, _globals, cancellationToken: cancellationToken)
-        : _state.ContinueWithAsync(code, Options, cancellationToken: cancellationToken);
+        ? CSharpScript.RunAsync(code, _options, _globals, cancellationToken: cancellationToken)
+        : _state.ContinueWithAsync(code, _options, cancellationToken: cancellationToken);
 }
 
 /// <summary>The Roslyn scripting "globals" object for every C# cell in a session — its public members are reachable from script code by bare name.</summary>

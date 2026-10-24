@@ -15,10 +15,12 @@ There is no shared schema/codegen step — if you change one side, change the ot
 // Run a cell. `cells` is the *entire* notebook's current state (index/language/code for every
 // code cell), sent with every request — not just "ralf" ones — so the host's cache of "what does
 // the notebook currently look like" never goes stale. Only the "ralf" kernel's Notebook_* tools
-// read it; the other kernels ignore the field.
+// read it; the other kernels ignore the field. `notebookPath` (optional, absent for an untitled
+// notebook) is the notebook's file: the first request carrying it fixes it for the session, and
+// the csharp kernel then resolves relative #r/#load against the notebook's folder.
 { "id": "3", "method": "execute", "params": { "kernel": "csharp", "code": "1 + 1", "cells": [
   { "index": 0, "language": "csharp", "code": "1 + 1" }
-] } }
+], "notebookPath": "D:\\notebooks\\demo.ipynb" } }
 
 // Terminate the host process's read loop (it then exits).
 { "id": "4", "method": "shutdown" }

@@ -11,6 +11,8 @@ export interface ExecuteParams {
     kernel: string;
     code: string;
     cells?: NotebookCellSnapshot[];
+    /** The notebook's file path (absent for an untitled notebook): relative #r/#load in C# cells resolve against its folder. */
+    notebookPath?: string;
 }
 
 export interface HostRequest {

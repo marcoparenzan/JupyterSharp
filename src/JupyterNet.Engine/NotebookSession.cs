@@ -27,10 +27,20 @@ public sealed class NotebookSession : INotebookHost
 
     /// <param name="pluginWarnings">Where plugin-discovery warnings go (a missing/broken kernel plugin directory) — defaults to discarding them.</param>
     /// <param name="kernelPathsOverride">Explicit plugin search directories, bypassing <c>JUPYTERNET_KERNEL_PATHS</c>/the `kernels/` fallback (the CLI's <c>--kernel-paths</c>).</param>
-    public NotebookSession(TextWriter? pluginWarnings = null, IEnumerable<string>? kernelPathsOverride = null)
+    /// <param name="notebookPath">The notebook's file, if it has one — see <see cref="NotebookPath"/>.</param>
+    public NotebookSession(TextWriter? pluginWarnings = null, IEnumerable<string>? kernelPathsOverride = null, string? notebookPath = null)
     {
         _plugins = KernelPluginLoader.DiscoverPlugins(pluginWarnings ?? TextWriter.Null, kernelPathsOverride);
+        NotebookPath = notebookPath;
     }
+
+    /// <summary>
+    /// The notebook's file path. The <c>csharp</c> kernel compiles its cells as if they lived in this file, so relative
+    /// <c>#r</c>/<c>#load</c> resolve against the notebook's folder. Read when that kernel is created (its first cell):
+    /// setting it later does not affect an already-created kernel. JupyterNet.Host fills it from the first
+    /// <c>execute</c> request that carries <c>notebookPath</c>.
+    /// </summary>
+    public string? NotebookPath { get; set; }
 
     public IReadOnlyList<NotebookCellInfo> Cells => _cells;
 
@@ -49,7 +59,7 @@ public sealed class NotebookSession : INotebookHost
         if (_kernels.TryGetValue(kernelId, out var existing)) return existing;
         IKernel created = kernelId switch
         {
-            KernelIdsLocal.CSharp => new CSharpKernel(),
+            KernelIdsLocal.CSharp => new CSharpKernel(NotebookPath),
             KernelIdsLocal.FSharp => new FSharpKernel(),
             KernelIdsLocal.PowerShell => new PowerShellKernel(),
             KernelIdsLocal.PowerFx => new PowerFxKernel(),

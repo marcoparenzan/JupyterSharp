@@ -8,7 +8,7 @@
 
   <PropertyGroup>
     <PackageId>JupyterNet.Kernels.PowerFx</PackageId>
-    <Version>0.2.0</Version>
+    <Version>0.3.0</Version>
     <Authors>Marco Parenzan</Authors>
     <Description>JupyterNet kernel that evaluates Power Fx formulas on a single RecalcEngine, with session state (named formulas/Set()) shared across cells.</Description>
   </PropertyGroup>
