@@ -15,7 +15,7 @@ Suite-wide points are in [../ScienceSharp/OPENPOINTS.md](../ScienceSharp/OPENPOI
 | J-9 | `docs/`, `ARCHITECTURE.md` and `CONVERSATION.md` still contain historical JupyterNet names. | open |
 | J-10 | The NavierStokes notebook is written for Polyglot Notebooks (`display(HTML(...))`); it runs in JupyterSharp but was not run in its declared host. | open |
 | J-11 | Removed on 2026-10-30: the old `jupyternet` tool and the `marcoparenzan.jupyternet-notebook` extension. VS Code deletes the old extension folder on its next restart. | closed |
-| J-12 | Cell outputs saved by the gate runs differ from the committed ones; decide whether the gate should keep rewriting notebooks in place. | open |
+| J-12 | Closed 2026-10-30: the gate rewrote the notebooks' saved outputs on every run (random SVG ids made every run differ). PlotSharp `preview.2` derives the ids from the chart, two consecutive gate runs now give identical notebooks, the notebooks are committed with their outputs, and a gate run leaves every repo clean. | closed |
 | J-13 | `#r "nuget:"` support is new (`preview.4`): all 14 NDSharp notebooks run (after their pins moved off 2.5.0), and they are a gate step. Not covered: `#r "nuget:"` in F# or PowerShell cells, a package that needs a different target framework than net11.0, offline use with an empty cache, and conflicts when two cells ask for different versions of the same package (the first reference wins). | open |
 | J-14 | A top-level `using var` is rewritten to `var`, so the object is not disposed at the end of the cell (Roslyn scripting rejects the original form). | known |
 | J-15 | Tool `preview.4` and extension `0.2.1` (bundling host `.4`) were installed on 2026-10-30; the four notebook templates were run with the installed tool. | closed |
