@@ -1,5 +1,6 @@
 {
   "name": "jupytersharp-notebook",
+  "icon": "icon.png",
   "displayName": "JupyterSharp Notebook",
   "description": "C#, F#, PowerShell, Power Fx, PySharp, Ontly and Ralf .ipynb notebooks in VS Code, backed by a JupyterSharp.Host process.",
   "version": "0.2.3",
