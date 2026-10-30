@@ -12,7 +12,7 @@ Suite-wide points are in [../ScienceSharp/OPENPOINTS.md](../ScienceSharp/OPENPOI
 | J-6 | Package size, solved for the native libraries: the notebook extension no longer bundles libtorch and OpenCV (win32-x64 153 MB → 43 MB, linux-x64 and darwin-arm64 43-46 MB). `build/package-extension.ps1 -BundleNatives` puts them back. Linux and macOS packages are built, not run. | done on Windows |
 | J-7 | The host bundles the Anthropic, OpenAI and Azure AI client libraries (about 10 MB). Needed only for Ralf, which cannot load. | open |
 | J-8 | About 80 uncommitted changes from the JupyterNet → JupyterSharp rename plus this session's edits. | open |
-| J-9 | `docs/`, `ARCHITECTURE.md` and `CONVERSATION.md` still contain historical JupyterNet names. | open |
+| J-9 | `docs/` and `ARCHITECTURE.md` still contain historical JupyterNet names. | open |
 | J-10 | The NavierStokes notebook is written for Polyglot Notebooks (`display(HTML(...))`); it runs in JupyterSharp but was not run in its declared host. | open |
 | J-11 | Removed on 2026-10-30: the old `jupyternet` tool and the `marcoparenzan.jupyternet-notebook` extension. VS Code deletes the old extension folder on its next restart. | closed |
 | J-12 | Closed 2026-10-30: the gate rewrote the notebooks' saved outputs on every run (random SVG ids made every run differ). PlotSharp `preview.2` derives the ids from the chart, two consecutive gate runs now give identical notebooks, the notebooks are committed with their outputs, and a gate run leaves every repo clean. | closed |

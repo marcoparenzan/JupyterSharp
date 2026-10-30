@@ -60,7 +60,7 @@ inject live objects into a kernel's context — see [samples/EmbeddingSample](sa
   (including variable injection), and `NotebookSession`'s dispatch/error handling.
 - `docs/protocol.md` — the wire protocol. [ARCHITECTURE.md](ARCHITECTURE.md) — how it all fits
   together, the plugin-loading design, and known limits. [USAGE.md](USAGE.md) — install and run
-  it. [CONVERSATION.md](CONVERSATION.md) — how this project came to be.
+  it.
   [docs/pandas-in-notebooks.md](docs/pandas-in-notebooks.md) and
   [docs/cvintro-course.md](docs/cvintro-course.md) — running pandas/numpy/OpenCV/torch-backed
   PySharp notebooks, including the full 61-notebook cvintro course.
