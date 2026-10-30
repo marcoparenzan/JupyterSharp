@@ -1,5 +1,5 @@
 #!/usr/bin/env pwsh
-# Packs every JupyterNet.* library/host into D:\dev\NuGetLocalFeed, the same feed
+# Packs every JupyterSharp.* library/host into D:\dev\NuGetLocalFeed, the same feed
 # PySharp/Ontly/RalfAI already publish to (see NuGet.Config at the repo root).
 #
 # The three kernel plugins (PySharp/Ontly/Ralf) live in their own repos now — this only packs
@@ -14,15 +14,15 @@ $ErrorActionPreference = "Stop"
 $root = Split-Path -Parent $PSScriptRoot
 
 $projects = @(
-    "src/JupyterNet.Protocol/JupyterNet.Protocol.csproj",
-    "src/JupyterNet.Kernels.Abstractions/JupyterNet.Kernels.Abstractions.csproj",
-    "src/JupyterNet.Kernels.CSharp/JupyterNet.Kernels.CSharp.csproj",
-    "src/JupyterNet.Kernels.FSharp/JupyterNet.Kernels.FSharp.csproj",
-    "src/JupyterNet.Kernels.PowerShell/JupyterNet.Kernels.PowerShell.csproj",
-    "src/JupyterNet.Kernels.PowerFx/JupyterNet.Kernels.PowerFx.csproj",
-    "src/JupyterNet.Engine/JupyterNet.Engine.csproj",
-    "src/JupyterNet.Host/JupyterNet.Host.csproj",
-    "src/JupyterNet.Cli/JupyterNet.Cli.csproj"
+    "src/JupyterSharp.Protocol/JupyterSharp.Protocol.csproj",
+    "src/JupyterSharp.Kernels.Abstractions/JupyterSharp.Kernels.Abstractions.csproj",
+    "src/JupyterSharp.Kernels.CSharp/JupyterSharp.Kernels.CSharp.csproj",
+    "src/JupyterSharp.Kernels.FSharp/JupyterSharp.Kernels.FSharp.csproj",
+    "src/JupyterSharp.Kernels.PowerShell/JupyterSharp.Kernels.PowerShell.csproj",
+    "src/JupyterSharp.Kernels.PowerFx/JupyterSharp.Kernels.PowerFx.csproj",
+    "src/JupyterSharp.Engine/JupyterSharp.Engine.csproj",
+    "src/JupyterSharp.Host/JupyterSharp.Host.csproj",
+    "src/JupyterSharp.Cli/JupyterSharp.Cli.csproj"
 )
 
 foreach ($project in $projects) {
