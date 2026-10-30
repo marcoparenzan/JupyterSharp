@@ -11,14 +11,14 @@ divergences: `PySharp/NOTEBOOKS_PLAN.md`). No Python installation is needed; the
    publish contains every platform's natives, about 1.3 GB instead of about 360 MB):
 
    ```powershell
-   dotnet publish D:\dev\2026\repos\PySharp\src\JupyterNet.Kernels.PySharp -c Release -r win-x64 --self-contained false `
-       -o D:\dev\2026\repos\PySharp\src\JupyterNet.Kernels.PySharp\bin\publish
+   dotnet publish D:\dev\2026\repos\PySharp\src\JupyterSharp.Kernels.PySharp -c Release -r win-x64 --self-contained false `
+       -o D:\dev\2026\repos\PySharp\src\JupyterSharp.Kernels.PySharp\bin\publish
    ```
 
-   Stop any running `JupyterNet.Host` first (VS Code restarts it on the next cell), otherwise the DLLs are locked.
-   This is the extension's default `jupyternet.kernelPaths` entry, so there is nothing else to configure. The host's
+   Stop any running `JupyterSharp.Host` first (VS Code restarts it on the next cell), otherwise the DLLs are locked.
+   This is the extension's default `jupytersharp.kernelPaths` entry, so there is nothing else to configure. The host's
    plugin loader probes the plugin folder for native libraries.
-2. In VS Code, open a notebook and pick the **JupyterNet** notebook type; cells of the course use the `pysharp`
+2. In VS Code, open a notebook and pick the **JupyterSharp** notebook type; cells of the course use the `pysharp`
    language. (For files written for Jupyter, set each code cell's `languageId` to `pysharp`.)
 
 ## Running
@@ -28,8 +28,8 @@ divergences: `PySharp/NOTEBOOKS_PLAN.md`). No Python installation is needed; the
 - **From the command line**, with the engine's CLI:
 
   ```powershell
-  dotnet run -c Release --project src\JupyterNet.Cli -- run <notebook.ipynb> `
-      --kernel-paths D:\dev\2026\repos\PySharp\src\JupyterNet.Kernels.PySharp\bin\publish --fail-fast
+  dotnet run -c Release --project src\JupyterSharp.Cli -- run <notebook.ipynb> `
+      --kernel-paths D:\dev\2026\repos\PySharp\src\JupyterSharp.Kernels.PySharp\bin\publish --fail-fast
   ```
 
   Run it from the folder that contains the notebooks: several cells open images with relative paths (`../img/...`).

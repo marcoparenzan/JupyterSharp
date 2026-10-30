@@ -1,12 +1,38 @@
 # Changelog
 
+## 0.3.1-net11-preview.4 — `#r "nuget:"` and top-level `using var` (packed to the local feed only, not published)
+
+Found while running the 14 NDSharp notebooks in JupyterSharp: none could run, because they reference their packages with `#r "nuget: Id, Version"`.
+
+- **`#r "nuget: Id, Version"`** in C# cells. The directive is cut out of the cell, the packages are restored with `dotnet restore` into
+  `%TEMP%\jupytersharp-nuget\<hash>` (override with `JUPYTERSHARP_NUGET_WORK`), their assemblies are added to the script options and their native
+  libraries are found through a per-assembly DllImport resolver. New files: `NuGetReferences.cs`, `NativeLibraries.cs`.
+- **Top-level `using var x = ...;`** is rewritten to `var x = ...;` (Roslyn scripting rejects it). The object is not disposed at the end of the cell.
+  New file: `CellRewrites.cs`.
+- Tests: 66/66 (19 new: directive parsing, project generation, assets reader, a failing restore, two real restores from the local feed, the `using var` rewrite).
+- Result: 13 of the 14 NDSharp notebooks ran clean, including the SkiaSharp plot and the OpenCV image notebooks. `12-heatmap` failed because it uses
+  `Figure.AddColorbar`, which the old `NDSharp.Plot 2.5.0` pin did not have. After the notebook pins moved to the current feed versions all 14 run.
+- All project versions are now `0.3.1-net11-preview.4` (the project files had said `.2` while `.3` was packed with a command-line override).
+
+
+## 0.3.1-net11-preview.3 — `display` and `HTML` cell helpers (packed to the local feed only, not published)
+
+Found while running the NavierStokes article notebook (`Articoli/2026.10 NavierStokes`) in JupyterSharp.
+
+- **The C# kernel now provides `display(object)` and `HTML(string)`**, the lowercase helpers used by
+  notebooks written for .NET Interactive / Polyglot Notebooks. Before, `display(HTML(svg))` failed
+  to compile (`CS0103`), so every later cell that depended on a variable from such a cell failed
+  too. `HTML` wraps markup in the new `HtmlString`; `display` sends it as HTML, a `byte[]` as a PNG
+  image, anything else as text, and null as nothing. They are members of `ScriptGlobals`, so a cell
+  can define its own `display` and it wins. Covered by three tests in `CSharpKernelTests`.
+
 ## 0.7.0 — C# console capture, notebook-relative paths (NuGet packages 0.3.0)
 
-Found while moving the Numbers repo's notebooks (`D:\Dev\2027\repos\Numbers`) to JupyterNet.
+Found while moving the Numbers repo's notebooks (`D:\Dev\2027\repos\Numbers`) to JupyterSharp.
 
 - **`Console.Out`/`Error` in C# cells are now captured**, the way `FSharpKernel` already did for
   `printfn`. Before, a C# cell's `Console.WriteLine` went to the real process stdout: missing from
-  the CLI's saved notebook, and — in `JupyterNet.Host` — written raw into the NDJSON channel. The
+  the CLI's saved notebook, and — in `JupyterSharp.Host` — written raw into the NDJSON channel. The
   new `ConsoleCapture` swaps the console for exactly one cell and also wraps the sink, so (1)
   console text is flushed as one text output right before any `Display.*` output, the result or an
   error, keeping the order the cell produced them in, and (2) writes a *sink* makes while handling
@@ -26,7 +52,7 @@ Found while moving the Numbers repo's notebooks (`D:\Dev\2027\repos\Numbers`) to
 
 ## 0.6.0 — PowerFx kernel, per-language samples
 
-- New builtin **`powerfx`** kernel (`JupyterNet.Kernels.PowerFx`, `Microsoft.PowerFx.Interpreter`):
+- New builtin **`powerfx`** kernel (`JupyterSharp.Kernels.PowerFx`, `Microsoft.PowerFx.Interpreter`):
   one `RecalcEngine` per session; a cell is one formula, the same grain a Power Apps formula bar
   works at. `ParserOptions.Culture` is pinned to the invariant culture — the host machine's own
   `it-IT` culture otherwise expects `;` instead of `,` as the argument separator, breaking every
@@ -42,8 +68,8 @@ Found while moving the Numbers repo's notebooks (`D:\Dev\2027\repos\Numbers`) to
 - Variable injection (`IVariableInjectable.SetVariableAsync`) via `TypeMarshallerCache.Marshal` —
   properties only, not methods, since Power Fx has no concept of calling a CLR instance method
   from a formula. A real, by-design difference from the other three builtin kernels, not a gap.
-- Removed `<InvariantGlobalization>true</InvariantGlobalization>` from `JupyterNet.Host.csproj` and
-  `JupyterNet.Cli.csproj` (leftover, unused boilerplate from this repo's first commit — both publish
+- Removed `<InvariantGlobalization>true</InvariantGlobalization>` from `JupyterSharp.Host.csproj` and
+  `JupyterSharp.Cli.csproj` (leftover, unused boilerplate from this repo's first commit — both publish
   framework-dependent, so it bought nothing). `Microsoft.PowerFx.Core` builds its own error messages
   through a `CultureInfo.CreateSpecificCulture` call that throws outright under that mode, turning
   a clean division-by-zero/syntax-error `WriteError` into a raw .NET exception — found by running a
@@ -66,7 +92,7 @@ Found while moving the Numbers repo's notebooks (`D:\Dev\2027\repos\Numbers`) to
 
 ## 0.4.0 — PowerShell kernel
 
-- New builtin **`powershell`** kernel (`JupyterNet.Kernels.PowerShell`, `Microsoft.PowerShell.SDK`
+- New builtin **`powershell`** kernel (`JupyterSharp.Kernels.PowerShell`, `Microsoft.PowerShell.SDK`
   — real PowerShell 7+): one embedded `Runspace` per session, session state persists the same way
   the other builtin kernels' does; `Write-Host`/`Write-Warning` captured via `PowerShell.Streams`
   (no custom `PSHost` needed — PS7+ routes `Write-Host` through the Information stream
@@ -76,27 +102,27 @@ Found while moving the Numbers repo's notebooks (`D:\Dev\2027\repos\Numbers`) to
   `Microsoft.CodeAnalysis.CSharp >= 5.0.0`, conflicting with the C# kernel's pinned `4.14.0` via
   `Microsoft.CodeAnalysis.CSharp.Scripting` — moved to `5.9.0`; the C# kernel's own test suite
   re-verified passing after the bump, not just assumed compatible.
-- `samples/tour.ipynb` gained two PowerShell cells; `jupyternet run`/the host/the extension all
+- `samples/tour.ipynb` gained two PowerShell cells; `jupytersharp run`/the host/the extension all
   install/dispatch it identically to `csharp`/`fsharp`.
 
 ## 0.3.0 — headless CLI, embedding, variable injection, tests
 
-- New `JupyterNet.Engine`: `NotebookDocument` (a C# nbformat v4 reader/writer — the first one in
+- New `JupyterSharp.Engine`: `NotebookDocument` (a C# nbformat v4 reader/writer — the first one in
   this repo outside the TypeScript extension), `NotebookSession` (kernel dispatch/plugin discovery/
-  variable injection, pulled out of `JupyterNet.Host`'s `Program.cs`). `JupyterNet.Host` is now a
+  variable injection, pulled out of `JupyterSharp.Host`'s `Program.cs`). `JupyterSharp.Host` is now a
   thin NDJSON wrapper around it.
-- New `JupyterNet.Kernels.Abstractions.IVariableInjectable`: an opt-in kernel capability for
+- New `JupyterSharp.Kernels.Abstractions.IVariableInjectable`: an opt-in kernel capability for
   injecting a live .NET object into a kernel's context, reached via
   `NotebookSession.SetVariableAsync`. Implemented by both builtin kernels — F#'s via
   `FsiEvaluationSession.AddBoundValue` (real static-ish typing, no unwrapping needed), C#'s via a
   one-line hidden `dynamic x = Injected["x"];` interaction (Roslyn scripting has no runtime-
   extensible globals story otherwise).
-- New `JupyterNet.Cli` (`jupyternet run <notebook.ipynb> [--kernel-paths] [--output|--in-place]
+- New `JupyterSharp.Cli` (`jupytersharp run <notebook.ipynb> [--kernel-paths] [--output|--in-place]
   [--fail-fast]`) — headless notebook execution, a minimal `nbconvert --execute` equivalent, exit
   code reflecting success.
-- New `samples/EmbeddingSample` — a console app embedding `JupyterNet.Engine` directly (no process,
+- New `samples/EmbeddingSample` — a console app embedding `JupyterSharp.Engine` directly (no process,
   no NDJSON) and injecting a `Weather` object into both builtin kernels.
-- New `tests/JupyterNet.Tests` (xUnit): nbformat round-tripping, both builtin kernels (session
+- New `tests/JupyterSharp.Tests` (xUnit): nbformat round-tripping, both builtin kernels (session
   persistence, output capture, error handling, variable injection), `NotebookSession` dispatch.
   Found two real issues while writing them: an injected object's type must be `public` (the DLR
   binder enforces real accessibility from the script's own separately-compiled assembly), and
@@ -105,16 +131,16 @@ Found while moving the Numbers repo's notebooks (`D:\Dev\2027\repos\Numbers`) to
   fixed by disabling parallelization for this test assembly, and documented as a real constraint
   in ARCHITECTURE.md, not just a test workaround.
 
-## 0.2.0 — rename to JupyterNet, plugin split, F#
+## 0.2.0 — rename to JupyterSharp, plugin split, F#
 
-- Renamed KerNet → **JupyterNet** throughout (namespaces, `PackageId`s, the extension's id/commands/
+- Renamed KerNet → **JupyterSharp** throughout (namespaces, `PackageId`s, the extension's id/commands/
   settings, docs) — including the repo folder itself
-  (`D:\Dev\2026\repos\KerNet` → `D:\Dev\2026\repos\JupyterNet`).
+  (`D:\Dev\2026\repos\KerNet` → `D:\Dev\2026\repos\JupyterSharp`).
 - `pysharp`/`ontly`/`ralf` moved out of this repo into their own engine's repo as kernel plugins
-  (`JupyterNet.Kernels.{PySharp,Ontly,Ralf}` under PySharp/ontly/RalfAI's own `src/`), each
-  implementing a new `IKernelPlugin` contract in `JupyterNet.Kernels.Abstractions`.
-  `JupyterNet.Host` discovers and loads them at runtime (`KernelPluginLoader.cs`) from
-  `JUPYTERNET_KERNEL_PATHS`/`kernels/*`, via `Assembly.LoadFrom` and its own-folder dependency
+  (`JupyterSharp.Kernels.{PySharp,Ontly,Ralf}` under PySharp/ontly/RalfAI's own `src/`), each
+  implementing a new `IKernelPlugin` contract in `JupyterSharp.Kernels.Abstractions`.
+  `JupyterSharp.Host` discovers and loads them at runtime (`KernelPluginLoader.cs`) from
+  `JUPYTERSHARP_KERNEL_PATHS`/`kernels/*`, via `Assembly.LoadFrom` and its own-folder dependency
   probing — see ARCHITECTURE.md for why a per-plugin `AssemblyLoadContext` was tried first and
   reverted after it broke plugin loading whenever a builtin kernel ran first.
 - Added a builtin **`fsharp`** kernel (`FSharp.Compiler.Service`'s `FsiEvaluationSession`) — a real
@@ -122,8 +148,8 @@ Found while moving the Numbers repo's notebooks (`D:\Dev\2027\repos\Numbers`) to
   VB.NET was considered and dropped: Roslyn has no scripting/REPL API for VB shaped like
   `CSharpScript`. FSI's own `val x: T = ...` echo is discarded (`TextWriter.Null`) rather than
   shown — a cell's output is exactly what it printed, plus the last expression's value.
-- `vscode-extension`: added `jupyternet.kernelPaths` (forwarded to the host as
-  `JUPYTERNET_KERNEL_PATHS`), `fsharp` in `supportedLanguages`; `build/package-extension.ps1` now
+- `vscode-extension`: added `jupytersharp.kernelPaths` (forwarded to the host as
+  `JUPYTERSHARP_KERNEL_PATHS`), `fsharp` in `supportedLanguages`; `build/package-extension.ps1` now
   also publishes the three plugins into `vscode-extension/host/kernels/*` for a self-contained
   `.vsix`.
 - Fixed the notebook HTML renderer failing with "exports is not defined": it was compiled as
@@ -132,17 +158,17 @@ Found while moving the Numbers repo's notebooks (`D:\Dev\2027\repos\Numbers`) to
 
 ## 0.1.0 — initial version
 
-- `JupyterNet.Host`: NDJSON stdio loop dispatching to four kernels.
+- `JupyterSharp.Host`: NDJSON stdio loop dispatching to four kernels.
 - `csharp` kernel: Roslyn scripting, session state across cells, `Display.Html`/`Display.Text`.
 - `pysharp` kernel: `PySharpLib.PyEngine`, session state carried forward by hand across cells,
   `display_html` callback.
 - `ontly` kernel: `Ontly.Domain.ContractCompiler` against the C# and Python generators, rendered as
   an HTML report; diagnostics rendered as cell errors.
-- `ralf` kernel: an in-process RalfAI `AgentEngine` with a `JupyterNetNotebookContext` exposing
+- `ralf` kernel: an in-process RalfAI `AgentEngine` with a `JupyterSharpNotebookContext` exposing
   `Notebook_ListCells`/`GetCell`/`RunCell`/`SetCellCode` tools.
-- VS Code extension: `jupyternet-notebook` type for `*.ipynb` files (real Jupyter nbformat v4, offered
+- VS Code extension: `jupytersharp-notebook` type for `*.ipynb` files (real Jupyter nbformat v4, offered
   as an "option" rather than taking over every `.ipynb`), one multi-language `NotebookController`,
-  a `text/html` output renderer, `JupyterNet: New Notebook` / `JupyterNet: Restart Kernel Host` commands.
+  a `text/html` output renderer, `JupyterSharp: New Notebook` / `JupyterSharp: Restart Kernel Host` commands.
 - Preliminary change in the RalfAI repo: packaged `RalfAI.Core` and `RalfAI.Abstractions` to
   `D:\dev\NuGetLocalFeed` (metadata-only — `PackageId`/`Version`/`Description` — no logic changes),
-  so JupyterNet could reference them the same way it references PySharp/Ontly.
+  so JupyterSharp could reference them the same way it references PySharp/Ontly.

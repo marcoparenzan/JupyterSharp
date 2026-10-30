@@ -1,4 +1,4 @@
-# pandas in JupyterNet notebooks (PySharp kernel)
+# pandas in JupyterSharp notebooks (PySharp kernel)
 
 The PySharp kernel runs `import pandas as pd` on **PySharp.Pandas**, a native .NET implementation of pandas 3.0 (no Python installation, no
 CPython extension). Printing, results and error types are checked against real pandas 3.0.6 — see `PySharp/PANDAS_PLAN.md` and the
@@ -9,11 +9,11 @@ CPython extension). Printing, results and error types are checked against real p
 Publish the PySharp kernel as described in [cvintro-course.md](cvintro-course.md) (the same publish carries pandas, numpy, matplotlib, OpenCV and torch):
 
 ```powershell
-dotnet publish D:\dev\2026\repos\PySharp\src\JupyterNet.Kernels.PySharp -c Release -r win-x64 --self-contained false `
-    -o D:\dev\2026\repos\PySharp\src\JupyterNet.Kernels.PySharp\bin\publish
+dotnet publish D:\dev\2026\repos\PySharp\src\JupyterSharp.Kernels.PySharp -c Release -r win-x64 --self-contained false `
+    -o D:\dev\2026\repos\PySharp\src\JupyterSharp.Kernels.PySharp\bin\publish
 ```
 
-Stop any running `JupyterNet.Host` first (VS Code restarts it on the next cell). Then open a notebook with the **JupyterNet** notebook type and use the
+Stop any running `JupyterSharp.Host` first (VS Code restarts it on the next cell). Then open a notebook with the **JupyterSharp** notebook type and use the
 `pysharp` language for the code cells.
 
 ## What a cell shows

@@ -1,11 +1,11 @@
-# JupyterNet host protocol
+# JupyterSharp host protocol
 
-NDJSON (one JSON object per line) over the stdin/stdout of a `JupyterNet.Host` process. One host
+NDJSON (one JSON object per line) over the stdin/stdout of a `JupyterSharp.Host` process. One host
 process per open notebook; the VS Code extension spawns it and owns its lifetime. No LSP-style
 `Content-Length` framing — line-delimited JSON was simple enough on both the C# and TypeScript
 sides that framing would only have added ceremony for an MVP.
 
-Message shapes are defined once, in C#, in [`src/JupyterNet.Protocol/Messages.cs`](../src/JupyterNet.Protocol/Messages.cs);
+Message shapes are defined once, in C#, in [`src/JupyterSharp.Protocol/Messages.cs`](../src/JupyterSharp.Protocol/Messages.cs);
 [`vscode-extension/src/protocol.ts`](../vscode-extension/src/protocol.ts) mirrors them by hand.
 There is no shared schema/codegen step — if you change one side, change the other.
 
@@ -54,8 +54,8 @@ is not tied to one specific request (see below) and carries `executionId: ""`.
 
 ## Kernel ids
 
-`csharp`, `fsharp`, `powershell`, `pysharp`, `ontly`, `ralf` — see `JupyterNet.Protocol.KernelIds` / `protocol.ts`'s
-`KernelIds`. Each is a language id a notebook cell can be set to; `JupyterNet.Host` creates the
+`csharp`, `fsharp`, `powershell`, `pysharp`, `ontly`, `ralf` — see `JupyterSharp.Protocol.KernelIds` / `protocol.ts`'s
+`KernelIds`. Each is a language id a notebook cell can be set to; `JupyterSharp.Host` creates the
 matching `IKernel` lazily, the first time that language is used in a session, and keeps it (and
 its state) for the rest of the session. `csharp`/`fsharp`/`powershell` are builtin; `pysharp`/`ontly`/`ralf` are
 kernel plugins discovered at startup (see ARCHITECTURE.md's "Plugin loading") — the ids here are

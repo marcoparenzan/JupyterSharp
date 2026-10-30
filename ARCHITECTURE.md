@@ -2,15 +2,15 @@
 
 ## Process shape
 
-One `JupyterNet.Host` process per open `.ipynb` notebook, spawned by the VS Code extension
-(`JupyterNetController.getClient`, [vscode-extension/src/kernelController.ts](vscode-extension/src/kernelController.ts))
-and killed when the notebook closes or "JupyterNet: Restart Kernel Host" is run. The extension and the
+One `JupyterSharp.Host` process per open `.ipynb` notebook, spawned by the VS Code extension
+(`JupyterSharpController.getClient`, [vscode-extension/src/kernelController.ts](vscode-extension/src/kernelController.ts))
+and killed when the notebook closes or "JupyterSharp: Restart Kernel Host" is run. The extension and the
 host talk NDJSON over stdio — see [docs/protocol.md](docs/protocol.md) for the exact messages.
 
-Inside the host ([src/JupyterNet.Host/Program.cs](src/JupyterNet.Host/Program.cs)), a single `while`
+Inside the host ([src/JupyterSharp.Host/Program.cs](src/JupyterSharp.Host/Program.cs)), a single `while`
 loop reads one request at a time and awaits it fully before reading the next — there is no
 concurrent execution of two cells in the same notebook. All of the actual work — the kernel
-dictionary, plugin discovery, dispatch — lives one layer down, in `JupyterNet.Engine`'s
+dictionary, plugin discovery, dispatch — lives one layer down, in `JupyterSharp.Engine`'s
 `NotebookSession` (see "Engine, CLI and embedding" below); `Program.cs` is now just that plus the
 NDJSON protocol wrapped around it. A kernel instance, created lazily on first use and kept for the
 rest of the session, *is* the cell's session state (Roslyn's `ScriptState`, the F#
@@ -19,8 +19,8 @@ rest of the session, *is* the cell's session state (Roslyn's `ScriptState`, the 
 ## Kernels: four builtin, three plugins
 
 `IKernel`/`IKernelOutputSink`/`IKernelPlugin`
-([src/JupyterNet.Kernels.Abstractions](src/JupyterNet.Kernels.Abstractions)) is the entire contract
-anything running as a JupyterNet kernel depends on:
+([src/JupyterSharp.Kernels.Abstractions](src/JupyterSharp.Kernels.Abstractions)) is the entire contract
+anything running as a JupyterSharp kernel depends on:
 
 ```csharp
 interface IKernel
@@ -49,13 +49,13 @@ interface IVariableInjectable
 implement it simply doesn't support injection, and `NotebookSession.SetVariableAsync` throws a
 clear `NotSupportedException` rather than pretending it worked.
 
-`csharp`, `fsharp`, `powershell` and `powerfx` are **builtin** — compiled straight into `JupyterNet.Host`, no
+`csharp`, `fsharp`, `powershell` and `powerfx` are **builtin** — compiled straight into `JupyterSharp.Host`, no
 discovery needed. `pysharp`/`ontly`/`ralf` are **plugins**: each lives in its own engine's repo
 (PySharp/Ontly/RalfAI), builds a small project implementing `IKernelPlugin`, and gets loaded into
 the host at runtime — see "Plugin loading" below for why they're split out this way and how it
 works.
 
-**CSharp** ([src/JupyterNet.Kernels.CSharp](src/JupyterNet.Kernels.CSharp)) — `CSharpScript.RunAsync`
+**CSharp** ([src/JupyterSharp.Kernels.CSharp](src/JupyterSharp.Kernels.CSharp)) — `CSharpScript.RunAsync`
 for the first cell, `ScriptState<object>.ContinueWithAsync` for every one after, so top-level
 `var`s declared in one cell are visible in the next. `Display.Html`/`Display.Text`
 (an `AsyncLocal<IKernelOutputSink>` set for the duration of `ExecuteAsync`) let a cell push rich
@@ -83,7 +83,7 @@ each call site: an injected instance of a `private`/non-public type will still t
 `RuntimeBinderException` when a cell tries to use its members (found writing this exact code's
 tests — the injected type has to be `public`).
 
-**FSharp** ([src/JupyterNet.Kernels.FSharp](src/JupyterNet.Kernels.FSharp)) — a single
+**FSharp** ([src/JupyterSharp.Kernels.FSharp](src/JupyterSharp.Kernels.FSharp)) — a single
 `FsiEvaluationSession` (`FSharp.Compiler.Service`) per session, a real long-lived FSI/REPL session,
 so (unlike PySharp) cross-cell state persistence needs no workaround at all. Two things had to be
 gotten right that a first pass at the API didn't get for free:
@@ -110,7 +110,7 @@ gotten right that a first pass at the API didn't get for free:
   instances executing at the same time race on that shared process-global state (found by the test
   suite: `PrintfnIsCapturedWithoutFsiEcho` flaked to empty output under xUnit's default parallel
   test execution, passed reliably once test parallelization was disabled). Never an issue in
-  `JupyterNet.Host`/the CLI (both process one cell at a time by design), but an embedding host
+  `JupyterSharp.Host`/the CLI (both process one cell at a time by design), but an embedding host
   running more than one `NotebookSession` concurrently on different threads should not do so if
   any of them touch an `fsharp` kernel at the same time.
 
@@ -121,7 +121,7 @@ just work with no unwrapping ceremony — confirmed with a `public` class exposi
 method and an array, all reachable directly (`weather.City`, `weather.TempC(3)`,
 `for x in weather.Forecast do ...`).
 
-**PowerShell** ([src/JupyterNet.Kernels.PowerShell](src/JupyterNet.Kernels.PowerShell)) — a single
+**PowerShell** ([src/JupyterSharp.Kernels.PowerShell](src/JupyterSharp.Kernels.PowerShell)) — a single
 `Runspace` (`Microsoft.PowerShell.SDK` — real PowerShell 7+, not Windows PowerShell 5.1) per
 session; a fresh `System.Management.Automation.PowerShell` pipeline per cell (the API's own
 intended usage — one pipeline per invocation), all running against that same `Runspace`, so `$x`
@@ -147,7 +147,7 @@ special one. Unlike `FSharpKernel`, `PowerShellKernel` never touches `Console.Ou
 capture goes through `PowerShell.Streams`/the pipeline's return objects instead), so it has none of
 `FSharpKernel`'s concurrent-execution constraint.
 
-**PowerFx** ([src/JupyterNet.Kernels.PowerFx](src/JupyterNet.Kernels.PowerFx)) — a single
+**PowerFx** ([src/JupyterSharp.Kernels.PowerFx](src/JupyterSharp.Kernels.PowerFx)) — a single
 `RecalcEngine` (`Microsoft.PowerFx.Interpreter`) per session. The grain is different from every
 other kernel here: a cell is *one formula*, not a script of statements — the same thing a Power
 Apps formula bar evaluates, with `ParserOptions.Culture` pinned to
@@ -169,8 +169,8 @@ either way. `EnableSetFunction()` stays enabled regardless, so nested/advanced `
 natively; a `Set()` nested that way against a brand-new name is a known, undocumented limitation
 (out of scope for what a notebook cell normally does).
 
-**`Microsoft.PowerFx.Core` and `InvariantGlobalization` don't mix.** `JupyterNet.Host.csproj`/
-`JupyterNet.Cli.csproj` both had `<InvariantGlobalization>true</InvariantGlobalization>` set —
+**`Microsoft.PowerFx.Core` and `InvariantGlobalization` don't mix.** `JupyterSharp.Host.csproj`/
+`JupyterSharp.Cli.csproj` both had `<InvariantGlobalization>true</InvariantGlobalization>` set —
 unrelated boilerplate from this repo's very first commit, before any kernel existed, kept with no
 particular reason (both are published framework-dependent, so it bought no actual trimming/size
 benefit). Under that mode, Power Fx's *own error-message formatting* — not just `Text()`'s
@@ -178,7 +178,7 @@ custom-format path — calls `CultureInfo.CreateSpecificCulture("en")` internall
 the invariant culture is supported in globalization-invariant mode"), so something as basic as a
 division-by-zero or a syntax-error cell stopped producing a clean `WriteError` and instead surfaced
 a raw, confusing .NET exception. Found by actually running a PowerFx error cell through the real
-`JupyterNet.Host` — the kernel's own test project has no such setting, so `dotnet test` alone never
+`JupyterSharp.Host` — the kernel's own test project has no such setting, so `dotnet test` alone never
 would have caught it; worth remembering for any future builtin kernel that leans on another
 library's own resource/localization machinery. Fixed by removing the setting from both `.csproj`
 files, re-verified against the full regression sequence (`Set`, errors, string functions, variable
@@ -192,7 +192,7 @@ language, not a scripting one) — so `weather.City` works here exactly like eve
 `weather.TempC(3)` does not. That's a real difference in what this kernel can do with an injected
 object, not a bug to fix.
 
-**PySharp** (plugin, `D:\dev\2026\repos\PySharp\src\JupyterNet.Kernels.PySharp`) — one `PyEngine`
+**PySharp** (plugin, `D:\dev\2026\repos\PySharp\src\JupyterSharp.Kernels.PySharp`) — one `PyEngine`
 per session. `PyEngine.Run` always starts a fresh `__main__` module seeded only from
 `PyEngine.Globals`, so there is no built-in "REPL" mode: `PySharpKernel` gets the same effect
 itself, by copying every non-dunder name out of the finished module's `PyModule.Dict` back into
@@ -201,7 +201,7 @@ Stdout is captured via the `TextWriter` the engine was built with; a `display_ht
 is injected (`SetVariable`) so cells can push HTML explicitly, the same role `Display.Html` plays
 for C#.
 
-**Ontly** (plugin, `D:\dev\2026\repos\ontly\src\JupyterNet.Kernels.Ontly`) — a cell is one full,
+**Ontly** (plugin, `D:\dev\2026\repos\ontly\src\JupyterSharp.Kernels.Ontly`) — a cell is one full,
 standalone YAML contract (no cross-cell `includes` in v1 — Ontly's own `ContractLoader` supports
 them, but resolving an `include` relative to "a notebook cell" has no obvious meaning yet).
 Compiles it with the real `Ontly.Domain.ContractCompiler` against both `Ontly.CSharp.CSharpGenerator`
@@ -209,13 +209,13 @@ and `Ontly.Python.PythonGenerator`; diagnostics (if any) become the cell's error
 output is a self-contained HTML report (a summary table plus the generated C# and Python,
 HTML-escaped — no external CDN scripts, so it renders offline in the notebook's sandboxed webview).
 
-**Ralf** (plugin, `D:\dev\MarcoParenzan\RalfAI\src\JupyterNet.Kernels.Ralf`) — the cell's text is
+**Ralf** (plugin, `D:\dev\MarcoParenzan\RalfAI\src\JupyterSharp.Kernels.Ralf`) — the cell's text is
 sent as a prompt to a lazily-created `RalfAI.AgentEngine`, built around a custom `IAgentContext`
-(`JupyterNetNotebookContext`) whose tools (`Notebook_ListCells`/`GetCell`/`RunCell`/`SetCellCode`)
+(`JupyterSharpNotebookContext`) whose tools (`Notebook_ListCells`/`GetCell`/`RunCell`/`SetCellCode`)
 are closures over `INotebookHost` — the host's cache of every cell's index/language/code, refreshed
 from the `cells` field the extension attaches to *every* execute request (see protocol.md).
 `Notebook_RunCell` dispatches straight back into the session's own kernel table (via
-`INotebookHost.RunCellAsync`, implemented by `NotebookSession` itself in `JupyterNet.Engine`),
+`INotebookHost.RunCellAsync`, implemented by `NotebookSession` itself in `JupyterSharp.Engine`),
 capturing that cell's output as plain text instead of NDJSON events. `Notebook_SetCellCode` can't touch the
 editor directly — only the extension can apply a `WorkspaceEdit` — so it sends an `editCell` event
 instead and returns immediately; the extension applies it and the *next*
@@ -224,7 +224,7 @@ last execute request). Progress/tool-call/notice events from `AgentEngine` strea
 plain-text output as they happen; the final answer is rendered Markdown → HTML (Markdig, the same
 library `RalfAI.Studio` uses) as the cell's rich output. Config is loaded with RalfAI's own
 `RalfAIConfig.Load()` — an existing `RALFAI_CONFIG_PATH` or `appsettings.json` next to
-`JupyterNet.Host` works unchanged; if neither is set up, the cell fails with a `WriteError`
+`JupyterSharp.Host` works unchanged; if neither is set up, the cell fails with a `WriteError`
 explaining what to add, instead of crashing the host. Since this plugin now lives inside the
 RalfAI repo itself, it references `RalfAI.Core`/`RalfAI.Abstractions`/`RalfAI.Providers` directly
 via `ProjectReference` rather than through NuGet.
@@ -232,16 +232,16 @@ via `ProjectReference` rather than through NuGet.
 ## Plugin loading
 
 PySharp/Ontly/Ralf are split out of this repo on purpose: each engine's own repo should own how it
-plugs into a notebook, versioned and released on that engine's own schedule, not JupyterNet's.
+plugs into a notebook, versioned and released on that engine's own schedule, not JupyterSharp's.
 That only works if the host can load a kernel it was never built against —
-[src/JupyterNet.Engine/KernelPluginLoader.cs](src/JupyterNet.Engine/KernelPluginLoader.cs) is the
-whole of that mechanism (in `JupyterNet.Engine` precisely so `JupyterNet.Host`, the CLI, and an
+[src/JupyterSharp.Engine/KernelPluginLoader.cs](src/JupyterSharp.Engine/KernelPluginLoader.cs) is the
+whole of that mechanism (in `JupyterSharp.Engine` precisely so `JupyterSharp.Host`, the CLI, and an
 embedding application all get it for free):
 
-- **Discovery**: search directories come from `JUPYTERNET_KERNEL_PATHS` (an OS path-list, one
+- **Discovery**: search directories come from `JUPYTERSHARP_KERNEL_PATHS` (an OS path-list, one
   directory per plugin — each is that plugin project's own `dotnet publish` output), falling back
   to scanning `<host base dir>/kernels/*` if unset. The VS Code extension sets the environment
-  variable from its own `jupyternet.kernelPaths` setting (default: this machine's three plugin
+  variable from its own `jupytersharp.kernelPaths` setting (default: this machine's three plugin
   repos); a packaged `.vsix` instead bundles published copies under `host/kernels/*`, which is
   exactly the fallback path, so it works without the setting.
 - **Loading**: `Assembly.LoadFrom(mainAssemblyPath)` — the one deliberately unglamorous choice
@@ -261,7 +261,7 @@ embedding application all get it for free):
   its types for one implementing `IKernelPlugin` and instantiates it via its parameterless
   constructor — nothing to register or configure beyond that class existing.
 - **Fail-soft**: a configured directory that's missing, empty, or whose assembly won't load logs a
-  warning to stderr (visible in the "JupyterNet" output channel) and simply leaves that kernel id
+  warning to stderr (visible in the "JupyterSharp" output channel) and simply leaves that kernel id
   unavailable; a cell that tries to use it gets a normal `WriteError`, not a crashed host — the
   same fail-soft precedent the Ralf kernel's missing-config path already set.
 - **Why not per-plugin `AssemblyLoadContext` isolation**: tried first, for real version isolation
@@ -283,10 +283,10 @@ of its kernel id actually executes in a session; `csharp`/`fsharp`/`powershell`/
 
 ## Engine, CLI and embedding
 
-`JupyterNet.Host`'s NDJSON loop was never the only reasonable way to run a notebook — a CI job or
+`JupyterSharp.Host`'s NDJSON loop was never the only reasonable way to run a notebook — a CI job or
 a script wants to run one headlessly, and a .NET application wants to embed one directly and hand
 it live objects. Both need the same kernel dispatch/plugin discovery logic `Program.cs` used to
-own inline, so that logic moved to a standalone library, [`JupyterNet.Engine`](src/JupyterNet.Engine):
+own inline, so that logic moved to a standalone library, [`JupyterSharp.Engine`](src/JupyterSharp.Engine):
 
 - **`NotebookDocument`**/`NotebookCell`/`NotebookOutput` — a small C# nbformat v4 reader/writer,
   the same shape `vscode-extension/src/notebookSerializer.ts` implements on the TypeScript side
@@ -302,16 +302,16 @@ own inline, so that logic moved to a standalone library, [`JupyterNet.Engine`](s
   exception, no separate "did it error" flag to check on the sink), and `SetVariableAsync` — the
   embedding entry point, delegating to a kernel's own `IVariableInjectable` if it has one.
 
-`JupyterNet.Host` ([src/JupyterNet.Host/Program.cs](src/JupyterNet.Host/Program.cs)) is now just a
+`JupyterSharp.Host` ([src/JupyterSharp.Host/Program.cs](src/JupyterSharp.Host/Program.cs)) is now just a
 `NotebookSession` plus the NDJSON loop around it — no kernel/plugin logic of its own left.
 
-**`JupyterNet.Cli`** ([src/JupyterNet.Cli/Program.cs](src/JupyterNet.Cli/Program.cs)) —
-`jupyternet run <notebook.ipynb> [--kernel-paths ...] [--output <file>|--in-place] [--fail-fast]`:
+**`JupyterSharp.Cli`** ([src/JupyterSharp.Cli/Program.cs](src/JupyterSharp.Cli/Program.cs)) —
+`jupytersharp run <notebook.ipynb> [--kernel-paths ...] [--output <file>|--in-place] [--fail-fast]`:
 loads a `NotebookDocument`, runs every code cell through a `NotebookSession` in order, printing
 output to the console as it happens and (for `--output`/`--in-place`) recording it back into real
 nbformat `outputs` — a minimal `jupyter nbconvert --execute` equivalent. Exit code `0` only if
 every cell completed without an error. Hand-parsed flags, no CLI framework dependency — the same
-"no more machinery than the task needs" choice `JupyterNet.Host` itself already made.
+"no more machinery than the task needs" choice `JupyterSharp.Host` itself already made.
 
 **Embedding** ([samples/EmbeddingSample](samples/EmbeddingSample)) — the whole story in one small
 console app: `new NotebookSession()`, `SetVariableAsync("csharp", "weather", new Weather())`, then
@@ -320,18 +320,18 @@ no NDJSON — just a library call.
 
 ## VS Code extension
 
-- `notebookSerializer.ts` — real Jupyter nbformat v4 (`.ipynb`), so a JupyterNet notebook opens,
+- `notebookSerializer.ts` — real Jupyter nbformat v4 (`.ipynb`), so a JupyterSharp notebook opens,
   diffs and renders like any other notebook file. Per-cell language (nbformat has no field for one
   language per cell — it assumes one language for the whole file) is stored under each cell's
   `metadata.vscode.languageId`, the convention VS Code's own built-in notebook tooling uses for the
-  same gap. `priority: "option"` in `package.json` means JupyterNet is offered as a choice for
+  same gap. `priority: "option"` in `package.json` means JupyterSharp is offered as a choice for
   `.ipynb` rather than silently taking over every notebook (a real concern once the Jupyter
   extension is also installed, which handles `.ipynb` for actual Python/Jupyter kernels).
 - `kernelController.ts` — one `NotebookController`
   (`supportedLanguages = [csharp, fsharp, powershell, powerfx, pysharp, ontly, ralf]`, the same "pick a language per
   cell" shape dotnet-interactive's polyglot notebooks used) per extension activation; one
-  `HostClient`/host process per open notebook document, keyed by URI. `jupyternet.kernelPaths`
-  (a setting, array of directories) is forwarded to the spawned host as `JUPYTERNET_KERNEL_PATHS`.
+  `HostClient`/host process per open notebook document, keyed by URI. `jupytersharp.kernelPaths`
+  (a setting, array of directories) is forwarded to the spawned host as `JUPYTERSHARP_KERNEL_PATHS`.
   Output events are chained (not just individually awaited) before being applied to the cell, so a
   fast burst of events — Ralf's progress lines in particular — lands in order.
 - `renderer/index.ts` — a `notebookRenderer` contribution for the `text/html` mime type: sets
@@ -361,7 +361,7 @@ no NDJSON — just a library call.
   done here since nothing in this round's ask required it. Ontly/Ralf have no obvious equivalent
   (a compiler, an agent) and likely never will.
 - `FSharpKernel` is not safe to run concurrently across threads (it swaps the process-global
-  `Console.Out`/`Error`) — see the F# section above. Not an issue for `JupyterNet.Host`/the CLI
+  `Console.Out`/`Error`) — see the F# section above. Not an issue for `JupyterSharp.Host`/the CLI
   (sequential by design); an embedding host must not run two `NotebookSession`s with `fsharp`
   kernels on different threads at the same time. Since 0.7.0 the same holds for `CSharpKernel`,
   which captures the console the same way; `PowerShellKernel` has no such constraint.
@@ -370,7 +370,7 @@ no NDJSON — just a library call.
   from `4.14.0` to `5.9.0`, see the PowerShell section above). Worth re-running the full test suite
   after adding any future builtin kernel, not just trusting that `dotnet restore` resolving a
   version conflict means behavior didn't change.
-- The VS Code extension compiles cleanly, `dotnet test tests/JupyterNet.Tests` passes (nbformat
+- The VS Code extension compiles cleanly, `dotnet test tests/JupyterSharp.Tests` passes (nbformat
   round-tripping, all four builtin kernels including variable injection, `NotebookSession`
   dispatch), and the host/CLI (builtin kernels + all three plugins, the exact cell sequence in
   `samples/tour.ipynb`) were exercised end to end via direct NDJSON and CLI runs *and*, separately,

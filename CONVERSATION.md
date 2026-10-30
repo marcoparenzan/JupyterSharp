@@ -1,6 +1,6 @@
 # How this project came to be
 
-A record of the conversation that started JupyterNet, kept here (per Marco's own convention of
+A record of the conversation that started JupyterSharp, kept here (per Marco's own convention of
 tracking everything inside the project, not just in chat) rather than only in a chat log.
 
 ## The ask
@@ -22,7 +22,7 @@ Neither was invented for this project — both were guessed wrong at first and t
 - **PySharp** (`D:\dev\2026\repos\PySharp`) is not IronPython or a custom Python-like DSL — it's a
   **from-scratch Python 3 interpreter written in C#**, ~13k lines, 628 tests, with a real embedding
   facade (`PySharpLib.PyEngine`). Its README documents the embedding API precisely enough that
-  JupyterNet's `pysharp` kernel is a thin wrapper, not a reimplementation.
+  JupyterSharp's `pysharp` kernel is a thin wrapper, not a reimplementation.
 - **Ontly** (`D:\dev\2026\repos\ontly`) is not a semantic-web/ontology DSL — it's a **YAML
   domain-contract compiler for C# and Python** (`Ontly.Domain.ContractCompiler` +
   `Ontly.CSharp`/`Ontly.Python` generators). That reframed what an "ontly kernel" should even mean:
@@ -41,12 +41,12 @@ a system prompt + tools for one kind of project).
 
 For Ralf to "interact with the notebook" rather than just answer in text, the `ralf` kernel needed
 its own `IAgentContext` with tools bound to the live notebook — listing cells, reading one, running
-one, editing one. That meant embedding `AgentEngine` **in-process** inside `JupyterNet.Host`, which in
+one, editing one. That meant embedding `AgentEngine` **in-process** inside `JupyterSharp.Host`, which in
 turn meant referencing `RalfAI.Core`/`RalfAI.Abstractions` as libraries. Only `RalfAI.Providers`
 was published as a NuGet package at the time; `RalfAI.Core`/`RalfAI.Abstractions` were not.
 
 Two ways to close that gap were on the table: a cross-repo `ProjectReference` (fast, no changes to
-RalfAI, but couples JupyterNet's build to a fixed path on disk), or packaging `RalfAI.Core`/
+RalfAI, but couples JupyterSharp's build to a fixed path on disk), or packaging `RalfAI.Core`/
 `RalfAI.Abstractions` the same way `RalfAI.Providers` already was and publishing them to
 `D:\dev\NuGetLocalFeed`. Marco chose the packaging route — consistent with how every other project
 under `D:\dev` is consumed — so that's what happened first, as a small, logic-free change to two
@@ -54,25 +54,25 @@ under `D:\dev` is consumed — so that's what happened first, as a small, logic-
 
 ## Protocol and process shape
 
-Rather than replicating .NET Interactive's own message protocol, JupyterNet uses a deliberately smaller
-one: NDJSON over the stdio of one `JupyterNet.Host` process per open notebook (see
+Rather than replicating .NET Interactive's own message protocol, JupyterSharp uses a deliberately smaller
+one: NDJSON over the stdio of one `JupyterSharp.Host` process per open notebook (see
 [docs/protocol.md](docs/protocol.md)). The one addition beyond plain "run this cell, get output
 back" is that every execute request carries a snapshot of *all* the notebook's cells — the only way
 the `ralf` kernel's tools can know what else is in the notebook without a separate sync protocol.
 
 ## What was verified live, in this session
 
-- `dotnet build JupyterNet.slnx` — clean build, including resolving `PySharp.Interpreter`,
+- `dotnet build JupyterSharp.slnx` — clean build, including resolving `PySharp.Interpreter`,
   `Ontly.Domain`/`Ontly.CSharp`/`Ontly.Python`, and the newly-packaged `RalfAI.Core`/
   `RalfAI.Abstractions`/`RalfAI.Providers` from `D:\dev\NuGetLocalFeed`.
-- `JupyterNet.Host` piped NDJSON by hand: C# session state across cells, PySharp session state across
+- `JupyterSharp.Host` piped NDJSON by hand: C# session state across cells, PySharp session state across
   cells plus `display_html`, a valid and an invalid Ontly contract (HTML report vs. diagnostic
   error), and — using the RalfAI configuration already set up on this machine — a real `ralf` cell
   that called `Notebook_ListCells` and `Notebook_RunCell` against a live PySharp cell and reported
   its actual output back in natural language.
 - After Marco installed Node.js/npm mid-session: `npm install && npm run compile` — clean, zero
   TypeScript errors, confirming the hand-written extension code against the real `vscode` API
-  types. That run also caught one real bug: a planned `jupyternet.hostDll` default in
+  types. That run also caught one real bug: a planned `jupytersharp.hostDll` default in
   `.vscode/settings.json` using `${workspaceFolder}` would *not* have worked (VS Code only
   substitutes that in `launch.json`/`tasks.json`, not in arbitrary extension settings) — replaced
   with an `resolveHostDll` fallback in `kernelController.ts` that checks the filesystem itself
@@ -94,30 +94,30 @@ nbformat v4 (cells, `source` as an array of newline-terminated lines, `outputs`,
 keep their results like any other `.ipynb`. Per-cell language — something plain nbformat has no
 field for, since it assumes one language for the whole notebook — is stored under each cell's
 `metadata.vscode.languageId`, the same convention VS Code's own built-in notebook tooling uses for
-that exact gap, rather than inventing a JupyterNet-specific key.
+that exact gap, rather than inventing a JupyterSharp-specific key.
 
 Registering `*.ipynb` also meant addressing what happens when the Jupyter extension (or another
 notebook extension) is installed and already claims `.ipynb`: `package.json`'s `notebooks`
-contribution now sets `"priority": "option"`, so JupyterNet is offered as a choice via "Open With..."
+contribution now sets `"priority": "option"`, so JupyterSharp is offered as a choice via "Open With..."
 rather than silently taking over every notebook in the workspace.
 
-## Rename to JupyterNet, splitting the three engine kernels out, adding F#
+## Rename to JupyterSharp, splitting the three engine kernels out, adding F#
 
-Marco's next ask, after seeing the notebook actually render: rename the project to **JupyterNet**
+Marco's next ask, after seeing the notebook actually render: rename the project to **JupyterSharp**
 (a better fit now that it produces real `.ipynb` files), move the PySharp/Ontly/Ralf kernels into
 their own engine's repo instead of living inside this one, and keep only C# in this repo —
 "aggiungi anche F#? VB.NET?" ("add F# too? VB.NET?"). Recommended, and agreed: F# in (a real
 scripting/REPL API exists, `FSharp.Compiler.Service`'s FSI), VB.NET out (Roslyn never shipped a
 `CSharpScript`-shaped scripting API for VB — a different, unstarted problem, not a small addition).
 
-Splitting the kernels out meant `JupyterNet.Host` could no longer be built against all four
+Splitting the kernels out meant `JupyterSharp.Host` could no longer be built against all four
 kernels directly — it needed to become a small plugin host instead, with PySharp/Ontly/Ralf each
-carrying their own kernel plugin in their own repo. `JupyterNet.Kernels.Abstractions` gained one
-new interface, `IKernelPlugin` (a kernel id plus a factory method), and `JupyterNet.Host` gained a
-`KernelPluginLoader` that discovers plugin directories (`JUPYTERNET_KERNEL_PATHS`, or `kernels/*`
+carrying their own kernel plugin in their own repo. `JupyterSharp.Kernels.Abstractions` gained one
+new interface, `IKernelPlugin` (a kernel id plus a factory method), and `JupyterSharp.Host` gained a
+`KernelPluginLoader` that discovers plugin directories (`JUPYTERSHARP_KERNEL_PATHS`, or `kernels/*`
 next to the host) and loads whichever one class in each implements that interface.
 
-**Renaming the repo folder itself** (`D:\Dev\2026\repos\KerNet` → `...\JupyterNet`) needed VS Code
+**Renaming the repo folder itself** (`D:\Dev\2026\repos\KerNet` → `...\JupyterSharp`) needed VS Code
 closed twice in a row — Windows file locks blocked first the top-level folder rename, then,
 separately, renaming the individual project subfolders inside it once work resumed (the same
 `EPERM`/"Device or resource busy" shape already seen once this session when reinstalling the
@@ -143,15 +143,15 @@ it.
 
 ## What was verified live, this round
 
-- `dotnet build JupyterNet.slnx` (host + builtin kernels only) and separately building each of the
+- `dotnet build JupyterSharp.slnx` (host + builtin kernels only) and separately building each of the
   three plugins in their new homes (PySharp/ontly/RalfAI repos) — all clean.
 - The exact cell sequence in `samples/tour.ipynb` (2 C# cells, 2 F# cells, 2 PySharp cells, 1 Ontly
   cell, 1 Ralf cell using its notebook tools against a live PySharp cell) run end to end through
-  `JupyterNet.Host` via generated NDJSON — the same real RalfAI configuration on this machine
+  `JupyterSharp.Host` via generated NDJSON — the same real RalfAI configuration on this machine
   handled the `ralf` cell for real again.
 - The plugin loader's fail-soft path: a configured kernel directory with no valid plugin in it logs
   a warning and leaves that kernel id unavailable rather than crashing the host.
-- `npm run compile` after all the extension-side changes (`jupyternet.kernelPaths`, `fsharp` in
+- `npm run compile` after all the extension-side changes (`jupytersharp.kernelPaths`, `fsharp` in
   `supportedLanguages`) — clean.
 - Marco then closed the loop himself: ran the F# cell in `samples/tour.ipynb` for real, in the
   installed extension — output matched the NDJSON-level test exactly (`printfn` output plus FSI's
@@ -187,12 +187,12 @@ Marco's next ask: run a notebook from a CLI (no VS Code), embed one in a .NET ap
 ability to inject live objects into a kernel's context, and back it all with real samples and
 tests rather than this session's manual NDJSON scripts.
 
-The shared blocker for the first two: `JupyterNet.Host`'s `Program.cs` owned kernel dispatch and
+The shared blocker for the first two: `JupyterSharp.Host`'s `Program.cs` owned kernel dispatch and
 plugin discovery inline — nothing reusable outside the NDJSON loop. That logic moved to a new
-library, `JupyterNet.Engine` (`NotebookSession` for dispatch, plus a new `NotebookDocument` — the
+library, `JupyterSharp.Engine` (`NotebookSession` for dispatch, plus a new `NotebookDocument` — the
 first C# nbformat reader/writer in this repo, everything before this read `.ipynb` from the
-TypeScript extension side only). `JupyterNet.Host` shrank to a thin wrapper around it; a new
-`JupyterNet.Cli` and `samples/EmbeddingSample` are built on the same `NotebookSession` with nothing
+TypeScript extension side only). `JupyterSharp.Host` shrank to a thin wrapper around it; a new
+`JupyterSharp.Cli` and `samples/EmbeddingSample` are built on the same `NotebookSession` with nothing
 extra to duplicate.
 
 Variable injection (`IVariableInjectable.SetVariableAsync`) needed a genuinely different mechanism
@@ -211,7 +211,7 @@ per kernel:
   `ScriptState.ContinueWithAsync` exactly like a real cell, so it becomes an ordinary top-level
   binding for every cell after it.
 
-Writing the xUnit test suite (`tests/JupyterNet.Tests`) surfaced two real bugs neither manual
+Writing the xUnit test suite (`tests/JupyterSharp.Tests`) surfaced two real bugs neither manual
 testing nor the standalone smoke scripts this session relied on before had caught:
 
 1. **The C# injection test used a `private` nested class** for the injected object. It failed with
@@ -228,14 +228,14 @@ testing nor the standalone smoke scripts this session relied on before had caugh
    kernel itself, documented in ARCHITECTURE.md (an embedding host must not run concurrent
    `NotebookSession`s that both touch `fsharp` on different threads) and worked around for the test
    suite by disabling xUnit's parallelization for this assembly (`CollectionBehavior
-  (DisableTestParallelization = true)`) — `JupyterNet.Host`/the CLI were never at risk since both
+  (DisableTestParallelization = true)`) — `JupyterSharp.Host`/the CLI were never at risk since both
   already process one cell at a time by design.
 
 ## What was verified live, the CLI/embedding round
 
-- `dotnet test tests/JupyterNet.Tests` — 20/20 passing (nbformat round-trip, both builtin kernels
+- `dotnet test tests/JupyterSharp.Tests` — 20/20 passing (nbformat round-trip, both builtin kernels
   including injection, `NotebookSession` dispatch/error handling), after fixing the two issues above.
-- `jupyternet run samples/tour.ipynb` (the CLI) with all five kernels via `--kernel-paths` —
+- `jupytersharp run samples/tour.ipynb` (the CLI) with all five kernels via `--kernel-paths` —
   identical cell-by-cell output to the NDJSON-level test from the previous round, including a real
   Ralf turn using its notebook tools; `--output` confirmed to write real nbformat `outputs` back
   (a genuine `nbconvert --execute` equivalent); `--fail-fast` confirmed to stop after the first
@@ -243,19 +243,19 @@ testing nor the standalone smoke scripts this session relied on before had caugh
 - `samples/EmbeddingSample` run directly: an injected `Weather` object's property read, method
   call, iteration, and mutation all confirmed working from both the `csharp` and `fsharp` kernels
   in the same session.
-- `dotnet build JupyterNet.slnx` — the full solution (Engine/Cli/Host/EmbeddingSample/Tests/builtin
+- `dotnet build JupyterSharp.slnx` — the full solution (Engine/Cli/Host/EmbeddingSample/Tests/builtin
   kernels) builds clean.
 
 ## Installing the CLI for real, and a Windows environment-variable quirk
 
 Marco asked "La CLI?" after trying it via `dotnet run` — the actual ask underneath was for it to be
-a real command, so it was packed and `dotnet tool install --global`-ed as `jupyternet`, the same
+a real command, so it was packed and `dotnet tool install --global`-ed as `jupytersharp`, the same
 pattern PySharp/Ontly/RalfAI already use for their own CLIs. He then hit the friction that motivated
-it in the first place: `jupyternet run tour.ipynb` without `--kernel-paths` fails every
+it in the first place: `jupytersharp run tour.ipynb` without `--kernel-paths` fails every
 pysharp/ontly/ralf cell with "Unknown kernel" — expected (no plugin paths configured), but annoying
 to retype every time for a supposedly-installed command.
 
-Fix: set `JUPYTERNET_KERNEL_PATHS` as a **persistent user environment variable** on this machine
+Fix: set `JUPYTERSHARP_KERNEL_PATHS` as a **persistent user environment variable** on this machine
 (`[Environment]::SetEnvironmentVariable(..., 'User')`), pointing at the same three plugin publish
 folders. Verified working — but not in the *same* terminal session it was set from: Windows doesn't
 propagate a newly-set user environment variable to already-running processes, only to new ones, so
@@ -290,10 +290,10 @@ couldn't have changed behavior.
 - A standalone smoke test (session persistence, `Write-Host`, `Write-Warning`, a division-by-zero
   error, and variable injection with real property/method access on the injected object) passed on
   the first run.
-- `dotnet test tests/JupyterNet.Tests` — 26/26 passing (the original 20 plus 6 new
+- `dotnet test tests/JupyterSharp.Tests` — 26/26 passing (the original 20 plus 6 new
   `PowerShellKernelTests`), confirming the Roslyn version bump didn't change the C# kernel's
   behavior.
-- `jupyternet run samples/tour.ipynb` (now with two PowerShell cells added) — all six kernels in
+- `jupytersharp run samples/tour.ipynb` (now with two PowerShell cells added) — all six kernels in
   the real sample notebook, exit code 0.
 
 ## Adding a PowerFx kernel, and per-language samples
@@ -327,18 +327,18 @@ these three):
    though parsing had been pinned to invariant. Fixed by formatting any `IFormattable` result
    through `CultureInfo.InvariantCulture` explicitly, the same way parsing already was.
 
-A fourth bug surfaced only once PowerFx cells were tried through the *real* `JupyterNet.Host`/
-`jupyternet` CLI rather than the standalone scratch console app used to find the first three:
+A fourth bug surfaced only once PowerFx cells were tried through the *real* `JupyterSharp.Host`/
+`jupytersharp` CLI rather than the standalone scratch console app used to find the first three:
 `Microsoft.PowerFx.Core` builds its own error messages through a `CultureInfo.
 CreateSpecificCulture("en")` call internally, which throws outright under .NET's
 `InvariantGlobalization` runtime mode — turning a clean division-by-zero/syntax-error
-`WriteError` into a raw, confusing .NET exception. Both `JupyterNet.Host.csproj` and
-`JupyterNet.Cli.csproj` had `<InvariantGlobalization>true</InvariantGlobalization>` set — leftover
+`WriteError` into a raw, confusing .NET exception. Both `JupyterSharp.Host.csproj` and
+`JupyterSharp.Cli.csproj` had `<InvariantGlobalization>true</InvariantGlobalization>` set — leftover
 boilerplate from this repo's very first commit, before any kernel existed, buying nothing (both
 publish framework-dependent, so no trimming/size benefit). Removed from both; re-verified the full
 regression sequence (`Set`, both error cases, string functions, variable injection, `Text()` with
 a custom format) through the actual host process this time, not just the kernel in isolation —
-the project's own `JupyterNet.Tests` has no such setting, so `dotnet test` alone would never have
+the project's own `JupyterSharp.Tests` has no such setting, so `dotnet test` alone would never have
 caught this one.
 
 Variable injection (`IVariableInjectable.SetVariableAsync`) came out simpler than feared:
@@ -354,10 +354,10 @@ list pipelines and pattern matching for F#; the object pipeline and `Get-Date` f
 `Set`/`If`/`Text` for Power Fx; a pandas `DataFrame` auto-displaying via `_repr_html_` for PySharp;
 a standalone contract for Ontly; a prompt plus a C# cell for Ralf to inspect/run for Ralf) rather
 than the single shared "hello" pattern `tour.ipynb` uses for all of them. Every cell in every one
-of the seven notebooks was run for real (via NDJSON against `JupyterNet.Host` for the plugin
+of the seven notebooks was run for real (via NDJSON against `JupyterSharp.Host` for the plugin
 kernels, via the CLI for the four builtin ones) before being written into the final `.ipynb` files
 — including catching the `Text()`/`InvariantGlobalization` bug above, which first showed up as the
-PowerFx sample's last cell failing under `jupyternet run` despite passing every one of its earlier,
+PowerFx sample's last cell failing under `jupytersharp run` despite passing every one of its earlier,
 narrower smoke tests.
 
 ## What was verified live, the PowerFx round
@@ -365,16 +365,16 @@ narrower smoke tests.
 - A standalone smoke test covering `Set` (both fresh-name and increment-pattern), arithmetic,
   `Concatenate`/`Upper`, a division-by-zero error, a syntax error, and variable injection
   (`weather.City` via `TypeMarshallerCache.Marshal`) — all passing after the three fixes above.
-- `dotnet test tests/JupyterNet.Tests` — 36/36 passing (30 prior plus 6 new
+- `dotnet test tests/JupyterSharp.Tests` — 36/36 passing (30 prior plus 6 new
   `PowerFxKernelTests`, including a regression test for the culture-formatting bug).
 - Every cell of all seven `samples/*.ipynb` notebooks (including the now-combined `tour.ipynb`)
-  run through `jupyternet run --fail-fast`, exit code 0 on every one — the plugin-kernel notebooks
-  (`pysharp`/`ontly`/`ralf`) via NDJSON against `JupyterNet.Host` directly with
-  `JUPYTERNET_KERNEL_PATHS` set, confirming the `InvariantGlobalization` fix didn't regress anything
+  run through `jupytersharp run --fail-fast`, exit code 0 on every one — the plugin-kernel notebooks
+  (`pysharp`/`ontly`/`ralf`) via NDJSON against `JupyterSharp.Host` directly with
+  `JUPYTERSHARP_KERNEL_PATHS` set, confirming the `InvariantGlobalization` fix didn't regress anything
   already working.
-- `dotnet build JupyterNet.slnx` clean; `./build/pack.ps1` repacked all nine JupyterNet packages
-  (including the new `JupyterNet.Kernels.PowerFx`) to `D:\dev\NuGetLocalFeed`; the global
-  `jupyternet` tool uninstalled and reinstalled (it was still on a stale `0.1.0`, predating even
+- `dotnet build JupyterSharp.slnx` clean; `./build/pack.ps1` repacked all nine JupyterSharp packages
+  (including the new `JupyterSharp.Kernels.PowerFx`) to `D:\dev\NuGetLocalFeed`; the global
+  `jupytersharp` tool uninstalled and reinstalled (it was still on a stale `0.1.0`, predating even
   the PowerShell kernel — `dotnet tool update` alone would not have caught that either) and
   re-verified running the PowerFx sample; `./build/package-extension.ps1` repackaged the `.vsix`
   with the new kernel and all three plugins bundled, and the extension reinstalled under its
