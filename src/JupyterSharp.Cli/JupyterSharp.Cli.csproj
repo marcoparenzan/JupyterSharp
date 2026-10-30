@@ -1,0 +1,20 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net11.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+  <PropertyGroup>
+    <PackageId>JupyterSharp.Cli</PackageId>
+    <Version>0.3.1-net11-preview.4</Version>
+    <Authors>Marco Parenzan</Authors>
+    <Description>Headless CLI for JupyterSharp: runs a .ipynb notebook's cells top to bottom without VS Code, for CI or scripting. Built on JupyterSharp.Engine, the same engine JupyterSharp.Host and any embedding application use.</Description>
+    <PackAsTool>true</PackAsTool>
+    <ToolCommandName>jupytersharp</ToolCommandName>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\JupyterSharp.Engine\JupyterSharp.Engine.csproj" />
+  </ItemGroup>
+</Project>

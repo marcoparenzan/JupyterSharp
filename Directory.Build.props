@@ -1,6 +1,12 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
 <Project>
   <!-- Applies to every project in the repo: NuGet package license metadata, matching the MIT LICENSE at the repo root. -->
   <PropertyGroup>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
+  </PropertyGroup>
+  <PropertyGroup Label="CentralBuildArtifacts">
+    <UseArtifactsOutput>true</UseArtifactsOutput>
+    <ArtifactsPath>D:\Dev\BuildArtifacts\JupyterSharp</ArtifactsPath>
+    <PackageOutputPath>D:\Dev\NuGetLocalFeed</PackageOutputPath>
   </PropertyGroup>
 </Project>

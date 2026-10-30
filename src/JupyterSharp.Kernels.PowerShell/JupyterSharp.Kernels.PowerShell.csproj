@@ -1,0 +1,26 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net11.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+  <PropertyGroup>
+    <PackageId>JupyterSharp.Kernels.PowerShell</PackageId>
+    <Version>0.3.1-net11-preview.4</Version>
+    <Authors>Marco Parenzan</Authors>
+    <Description>JupyterSharp kernel that runs PowerShell cells on a single embedded Runspace (Microsoft.PowerShell.SDK), with session state shared across cells.</Description>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\JupyterSharp.Kernels.Abstractions\JupyterSharp.Kernels.Abstractions.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.PowerShell.SDK" Version="7.6.6" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="System.Security.Cryptography.Pkcs" Version="10.0.13" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="System.Security.Cryptography.Xml" Version="10.0.13" />
+  </ItemGroup>
+</Project>

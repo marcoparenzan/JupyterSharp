@@ -1,0 +1,21 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net11.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+  <PropertyGroup>
+    <PackageId>JupyterSharp.Host</PackageId>
+    <Version>0.3.1-net11-preview.4</Version>
+    <Authors>Marco Parenzan</Authors>
+    <Description>JupyterSharp's kernel host: reads NDJSON execute requests on stdin, runs the builtin csharp/fsharp kernels plus any kernel plugins found via JUPYTERSHARP_KERNEL_PATHS (PySharp/Ontly/Ralf live in their own repos), writes NDJSON output events on stdout.</Description>
+    <PackAsTool>true</PackAsTool>
+    <ToolCommandName>jupytersharp-host</ToolCommandName>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\JupyterSharp.Protocol\JupyterSharp.Protocol.csproj" />
+    <ProjectReference Include="..\JupyterSharp.Engine\JupyterSharp.Engine.csproj" />
+  </ItemGroup>
+</Project>

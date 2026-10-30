@@ -1,0 +1,85 @@
+namespace JupyterSharp.Protocol;
+
+/// <summary>
+/// Kernel ids a JupyterSharp notebook cell can be executed as. <see cref="CSharp"/>/<see cref="FSharp"/>/
+/// <see cref="PowerShell"/> are built into <c>JupyterSharp.Host</c>; <see cref="PySharp"/>/<see cref="Ontly"/>/
+/// <see cref="Ralf"/> are the ids their respective plugin kernels (living in the PySharp/Ontly/RalfAI
+/// repos) declare via <c>IKernelPlugin.KernelId</c> — listed here only as the conventional defaults,
+/// not enforced by the host, since any plugin can declare any id.
+/// </summary>
+public static class KernelIds
+{
+    public const string CSharp = "csharp";
+    public const string FSharp = "fsharp";
+    public const string PowerShell = "powershell";
+    public const string PowerFx = "powerfx";
+    public const string PySharp = "pysharp";
+    public const string Ontly = "ontly";
+    public const string Ralf = "ralf";
+}
+
+/// <summary>A lightweight snapshot of one notebook cell, as the extension currently sees it.</summary>
+public sealed record NotebookCellSnapshot(int Index, string Language, string Code);
+
+/// <summary>
+/// Parameters of an "execute" request: which kernel, the cell's source text, and — sent with
+/// every request, not just "ralf" ones, so the host's notebook cache never goes stale — a
+/// snapshot of every cell currently in the notebook. Only the "ralf" kernel's notebook tools
+/// (<c>Notebook_*</c>) read <see cref="Cells"/>; other kernels ignore it. <see cref="NotebookPath"/> is the notebook's
+/// file (absent for an untitled notebook): the host uses it so the <c>csharp</c> kernel resolves relative
+/// <c>#r</c>/<c>#load</c> against the notebook's folder.
+/// </summary>
+public sealed record ExecuteParams(string Kernel, string Code, IReadOnlyList<NotebookCellSnapshot>? Cells = null, string? NotebookPath = null);
+
+/// <summary>
+/// A request sent by the extension to <c>JupyterSharp.Host</c> on stdin, one JSON object per line.
+/// <see cref="Method"/> is <c>"execute"</c> (with <see cref="Params"/> set) or <c>"shutdown"</c>.
+/// </summary>
+public sealed record HostRequest(string Id, string Method, ExecuteParams? Params = null);
+
+/// <summary>
+/// An event emitted by <c>JupyterSharp.Host</c> on stdout, one JSON object per line, correlated to a
+/// request by <see cref="ExecutionId"/> (the request's <see cref="HostRequest.Id"/>).
+/// </summary>
+public sealed record HostEvent(
+    string Event,
+    string ExecutionId,
+    string? MimeType = null,
+    string? Data = null,
+    string? Message = null,
+    string? StackTrace = null,
+    string? Status = null,
+    int? CellIndex = null,
+    string? NewCode = null,
+    string? Encoding = null)
+{
+    public static HostEvent Output(string executionId, string mimeType, string data) =>
+        new("output", executionId, MimeType: mimeType, Data: data);
+
+    /// <summary>A binary output (an image): <see cref="Data"/> is base64 and <see cref="Encoding"/> says so.</summary>
+    public static HostEvent OutputBinary(string executionId, string mimeType, byte[] data) =>
+        new("output", executionId, MimeType: mimeType, Data: Convert.ToBase64String(data), Encoding: "base64");
+
+    public static HostEvent Error(string executionId, string message, string? stackTrace = null) =>
+        new("error", executionId, Message: message, StackTrace: stackTrace);
+
+    public static HostEvent Complete(string executionId, bool ok) =>
+        new("complete", executionId, Status: ok ? "ok" : "error");
+
+    /// <summary>
+    /// Asks the extension to overwrite another cell's source — how the "ralf" kernel's
+    /// <c>Notebook_SetCellCode</c> tool reaches back into the editor, since only the extension can
+    /// apply a <c>WorkspaceEdit</c> to a cell's document.
+    /// </summary>
+    public static HostEvent EditCell(string executionId, int cellIndex, string newCode) =>
+        new("editCell", executionId, CellIndex: cellIndex, NewCode: newCode);
+}
+
+public static class MimeTypes
+{
+    public const string PlainText = "text/plain";
+    public const string Html = "text/html";
+    public const string Png = "image/png";
+    public const string Jpeg = "image/jpeg";
+    public const string Svg = "image/svg+xml";
+}

@@ -1,0 +1,14 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net11.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+  <PropertyGroup>
+    <PackageId>JupyterSharp.Protocol</PackageId>
+    <Version>0.3.1-net11-preview.4</Version>
+    <Authors>Marco Parenzan</Authors>
+    <Description>NDJSON message contracts shared by JupyterSharp.Host and the JupyterSharp VS Code extension.</Description>
+  </PropertyGroup>
+</Project>

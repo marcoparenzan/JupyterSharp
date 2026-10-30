@@ -1,0 +1,19 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/JupyterSharp.Cli/JupyterSharp.Cli.csproj" />
+    <Project Path="src/JupyterSharp.Engine/JupyterSharp.Engine.csproj" />
+    <Project Path="src/JupyterSharp.Host/JupyterSharp.Host.csproj" />
+    <Project Path="src/JupyterSharp.Kernels.Abstractions/JupyterSharp.Kernels.Abstractions.csproj" />
+    <Project Path="src/JupyterSharp.Kernels.CSharp/JupyterSharp.Kernels.CSharp.csproj" />
+    <Project Path="src/JupyterSharp.Kernels.FSharp/JupyterSharp.Kernels.FSharp.csproj" />
+    <Project Path="src/JupyterSharp.Kernels.PowerShell/JupyterSharp.Kernels.PowerShell.csproj" />
+    <Project Path="src/JupyterSharp.Kernels.PowerFx/JupyterSharp.Kernels.PowerFx.csproj" />
+    <Project Path="src/JupyterSharp.Protocol/JupyterSharp.Protocol.csproj" />
+  </Folder>
+  <Folder Name="/samples/">
+    <Project Path="samples/EmbeddingSample/EmbeddingSample.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/JupyterSharp.Tests/JupyterSharp.Tests.csproj" />
+  </Folder>
+</Solution>
