@@ -1,0 +1,11 @@
+* text=auto
+*.sh text eol=lf
+*.ps1 text eol=crlf
+*.png binary
+*.jpg binary
+*.ico binary
+*.nupkg binary
+*.vsix binary
+*.zip binary
+*.dll binary
+*.ttf binary
