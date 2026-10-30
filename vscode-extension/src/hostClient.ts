@@ -5,7 +5,7 @@ import { ExecuteParams, HostEvent, HostRequest, NotebookCellSnapshot } from "./p
 export type EditCellHandler = (cellIndex: number, newCode: string) => void;
 
 /**
- * One JupyterNet.Host process per open notebook, talking NDJSON over its stdin/stdout. `execute`
+ * One JupyterSharp.Host process per open notebook, talking NDJSON over its stdin/stdout. `execute`
  * resolves once the matching "complete" event comes back; every event in between (including
  * more than one "output") is streamed to `onEvent` as it arrives. "editCell" events are not tied
  * to a specific `execute` call (the host sends `executionId: ""` for them — see

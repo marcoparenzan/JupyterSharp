@@ -1,4 +1,4 @@
-// Mirrors src/JupyterNet.Protocol/Messages.cs — keep the two in sync by hand (there is no shared
+// Mirrors src/JupyterSharp.Protocol/Messages.cs — keep the two in sync by hand (there is no shared
 // schema generation in this MVP; see docs/protocol.md).
 
 export interface NotebookCellSnapshot {

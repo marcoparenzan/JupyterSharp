@@ -1,8 +1,8 @@
 {
-  "name": "jupyternet-notebook",
-  "displayName": "JupyterNet Notebook",
-  "description": "C#, F#, PowerShell, Power Fx, PySharp, Ontly and Ralf .ipynb notebooks in VS Code, backed by a JupyterNet.Host process.",
-  "version": "0.2.0",
+  "name": "jupytersharp-notebook",
+  "displayName": "JupyterSharp Notebook",
+  "description": "C#, F#, PowerShell, Power Fx, PySharp, Ontly and Ralf .ipynb notebooks in VS Code, backed by a JupyterSharp.Host process.",
+  "version": "0.2.3",
   "publisher": "marcoparenzan",
   "license": "MIT",
   "engines": {
@@ -10,22 +10,22 @@
   },
   "categories": ["Notebooks", "Programming Languages", "Machine Learning"],
   "activationEvents": [
-    "onNotebook:jupyternet-notebook"
+    "onNotebook:jupytersharp-notebook"
   ],
   "main": "./out/extension.js",
   "contributes": {
     "notebooks": [
       {
-        "type": "jupyternet-notebook",
-        "displayName": "JupyterNet Notebook",
+        "type": "jupytersharp-notebook",
+        "displayName": "JupyterSharp Notebook",
         "priority": "option",
         "selector": [{ "filenamePattern": "*.ipynb" }]
       }
     ],
     "notebookRenderer": [
       {
-        "id": "jupyternet-html-renderer",
-        "displayName": "JupyterNet HTML output",
+        "id": "jupytersharp-html-renderer",
+        "displayName": "JupyterSharp HTML output",
         "entrypoint": "./out/renderer/index.js",
         "mimeTypes": ["text/html"]
       }
@@ -40,38 +40,34 @@
     ],
     "commands": [
       {
-        "command": "jupyternet.newNotebook",
-        "title": "JupyterNet: New Notebook",
-        "category": "JupyterNet"
+        "command": "jupytersharp.newNotebook",
+        "title": "JupyterSharp: New Notebook",
+        "category": "JupyterSharp"
       },
       {
-        "command": "jupyternet.restartHost",
-        "title": "JupyterNet: Restart Kernel Host",
-        "category": "JupyterNet"
+        "command": "jupytersharp.restartHost",
+        "title": "JupyterSharp: Restart Kernel Host",
+        "category": "JupyterSharp"
       }
     ],
     "configuration": {
-      "title": "JupyterNet",
+      "title": "JupyterSharp",
       "properties": {
-        "jupyternet.hostDll": {
+        "jupytersharp.hostDll": {
           "type": "string",
           "default": "",
-          "description": "Path to JupyterNet.Host.dll. Empty uses the copy bundled with the extension (host/JupyterNet.Host.dll)."
+          "description": "Path to JupyterSharp.Host.dll. Empty uses the copy bundled with the extension (host/JupyterSharp.Host.dll)."
         },
-        "jupyternet.dotnetPath": {
+        "jupytersharp.dotnetPath": {
           "type": "string",
           "default": "dotnet",
-          "description": "The 'dotnet' executable used to run JupyterNet.Host."
+          "description": "The 'dotnet' executable used to run JupyterSharp.Host."
         },
-        "jupyternet.kernelPaths": {
+        "jupytersharp.kernelPaths": {
           "type": "array",
           "items": { "type": "string" },
-          "default": [
-            "D:\\dev\\2026\\repos\\PySharp\\src\\JupyterNet.Kernels.PySharp\\bin\\publish",
-            "D:\\dev\\2026\\repos\\ontly\\src\\JupyterNet.Kernels.Ontly\\bin\\publish",
-            "D:\\dev\\MarcoParenzan\\RalfAI\\src\\JupyterNet.Kernels.Ralf\\bin\\publish"
-          ],
-          "description": "Directories JupyterNet.Host scans for kernel plugins (pysharp/ontly/ralf), forwarded to it as JUPYTERNET_KERNEL_PATHS. Each is one plugin's own 'dotnet publish' output. Defaults to this machine's three plugin repos; override per workspace if they live elsewhere."
+          "default": [],
+          "description": "Directories JupyterSharp.Host scans for kernel plugins (pysharp/ontly/ralf), forwarded to it as JUPYTERSHARP_KERNEL_PATHS. Each is one plugin's own 'dotnet publish' output. Defaults to the PySharp plugin in the Science suite; override to use your own plugin builds."
         }
       }
     }
