@@ -109,7 +109,8 @@ public sealed class NotebookDocument
             ["nbformat"] = 4,
             ["nbformat_minor"] = 5
         };
-        return root.ToJsonString(new JsonSerializerOptions { WriteIndented = true }) + "\n";
+        // Always LF: the notebook format is LF text, and the OS newline (CRLF on Windows) made every saved notebook differ from its committed copy.
+        return root.ToJsonString(new JsonSerializerOptions { WriteIndented = true, NewLine = "\n" }) + "\n";
     }
 
     /// <summary>nbformat's <c>source</c>/<c>text</c> convention: an array of lines, each keeping its own trailing "\n" except possibly the last.</summary>

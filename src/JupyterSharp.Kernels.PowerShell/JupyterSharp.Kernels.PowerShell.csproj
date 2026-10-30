@@ -7,7 +7,7 @@
   </PropertyGroup>
   <PropertyGroup>
     <PackageId>JupyterSharp.Kernels.PowerShell</PackageId>
-    <Version>0.3.1-net11-preview.4</Version>
+    <Version>0.3.1-net11-preview.5</Version>
     <Authors>Marco Parenzan</Authors>
     <Description>JupyterSharp kernel that runs PowerShell cells on a single embedded Runspace (Microsoft.PowerShell.SDK), with session state shared across cells.</Description>
   </PropertyGroup>

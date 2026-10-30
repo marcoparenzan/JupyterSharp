@@ -12,6 +12,20 @@ public class NotebookDocumentTests
     }
 
     [Fact]
+    public void SavedNotebookUsesOnlyLfLineEndings()
+    {
+        var doc = new NotebookDocument();
+        doc.Cells.Add(new NotebookCell { Index = 0, Kind = "code", Language = "csharp", Source = "var x = 1;\r\nx + 1" });
+        doc.Cells.Add(new NotebookCell { Index = 1, Kind = "markdown", Source = "# Title\n\ntext" });
+
+        var json = doc.ToJson();
+
+        Assert.DoesNotContain('\r', json);       // structure and string contents alike: CR is escaped inside strings, never raw
+        Assert.EndsWith("}\n", json);
+        Assert.True(json.Count(c => c == '\n') > 10, "the JSON is indented over many lines");
+    }
+
+    [Fact]
     public void RoundTripsCodeAndMarkdownCellsWithPerCellLanguage()
     {
         var original = new NotebookDocument();
