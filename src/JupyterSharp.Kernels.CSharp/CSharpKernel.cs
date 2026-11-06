@@ -34,9 +34,19 @@ public sealed class CSharpKernel : IKernel, IVariableInjectable
     /// <c>#r</c>/<c>#load</c> resolve against the notebook's folder — and inside a <c>#load</c>ed file, against that
     /// file's folder — instead of failing; diagnostics name the notebook. Without it, only absolute paths resolve.
     /// </param>
-    public CSharpKernel(string? notebookPath = null)
+    public CSharpKernel(string? notebookPath = null) : this(notebookPath, null, null) { }
+
+    /// <summary>
+    /// A C# kernel that starts with extra assemblies referenced and extra namespaces imported, so a library can ship its own kernel
+    /// (a plugin that wraps this class) whose cells need no <c>#r</c> and no <c>using</c> for the library. The assemblies are the ones
+    /// already loaded in the process, so a plugin and its cells see one copy of each type.
+    /// </summary>
+    public CSharpKernel(string? notebookPath, IEnumerable<System.Reflection.Assembly>? references, IEnumerable<string>? imports)
     {
-        _options = notebookPath is null ? BaseOptions : BaseOptions.WithFilePath(Path.GetFullPath(notebookPath));
+        var options = notebookPath is null ? BaseOptions : BaseOptions.WithFilePath(Path.GetFullPath(notebookPath));
+        if (references is not null) options = options.AddReferences(references);
+        if (imports is not null) options = options.AddImports(imports);
+        _options = options;
     }
 
     public async Task ExecuteAsync(string code, IKernelOutputSink sink, CancellationToken cancellationToken)

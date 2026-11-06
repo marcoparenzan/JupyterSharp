@@ -11,8 +11,8 @@ divergences: `PySharp/NOTEBOOKS_PLAN.md`). No Python installation is needed; the
    publish contains every platform's natives, about 1.3 GB instead of about 360 MB):
 
    ```powershell
-   dotnet publish D:\dev\2026\repos\PySharp\src\JupyterSharp.Kernels.PySharp -c Release -r win-x64 --self-contained false `
-       -o D:\dev\2026\repos\PySharp\src\JupyterSharp.Kernels.PySharp\bin\publish
+   dotnet publish D:\dev\2026\repos\PySharp\src\PySharp.JupyterSharp.Kernel -c Release -r win-x64 --self-contained false `
+       -o D:\dev\2026\repos\PySharp\src\PySharp.JupyterSharp.Kernel\bin\publish
    ```
 
    Stop any running `JupyterSharp.Host` first (VS Code restarts it on the next cell), otherwise the DLLs are locked.
@@ -29,7 +29,7 @@ divergences: `PySharp/NOTEBOOKS_PLAN.md`). No Python installation is needed; the
 
   ```powershell
   dotnet run -c Release --project src\JupyterSharp.Cli -- run <notebook.ipynb> `
-      --kernel-paths D:\dev\2026\repos\PySharp\src\JupyterSharp.Kernels.PySharp\bin\publish --fail-fast
+      --kernel-paths D:\dev\2026\repos\PySharp\src\PySharp.JupyterSharp.Kernel\bin\publish --fail-fast
   ```
 
   Run it from the folder that contains the notebooks: several cells open images with relative paths (`../img/...`).

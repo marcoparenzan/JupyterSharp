@@ -25,10 +25,10 @@ Everything below is the detailed setup: prerequisites, building from source, the
 - `D:\Dev\NuGetLocalFeed` reachable (it is a source in the machine's NuGet.Config) and containing
   `JupyterSharp.Kernels.Abstractions` (pack it from this repo with `build/pack.ps1`, or pass `-p:Version=…` to `dotnet pack`)
   and `PySharp.Interpreter`.
-- The **PySharp kernel plugin** built once. It lives in the PySharp repo (`PySharp/src/JupyterSharp.Kernels.PySharp`):
+- The **PySharp kernel plugin** built once. It lives in the PySharp repo (`PySharp/src/PySharp.JupyterSharp.Kernel`):
 
   ```powershell
-  dotnet publish D:\Dev\Science\PySharp\src\JupyterSharp.Kernels.PySharp -c Release -o D:\Dev\Science\PySharp\src\JupyterSharp.Kernels.PySharp\bin\publish -r win-x64 --self-contained false
+  dotnet publish D:\Dev\Science\PySharp\src\PySharp.JupyterSharp.Kernel -c Release -o D:\Dev\Science\PySharp\src\PySharp.JupyterSharp.Kernel\bin\publish -r win-x64 --self-contained false
   ```
 
   Or build it for the gate with `dotnet run --file D:\Dev\Science\MathemaSharp\ops\BuildPySharpKernel.cs`. The packaged extension
@@ -76,7 +76,7 @@ jupytersharp run samples/tour.ipynb
 # or, without installing: dotnet run --project src/JupyterSharp.Cli -- run samples/tour.ipynb
 
 # pysharp/ontly/ralf need the same plugin paths as the host/extension — either pass them every time:
-jupytersharp run samples/tour.ipynb --kernel-paths "D:\dev\2026\repos\PySharp\src\JupyterSharp.Kernels.PySharp\bin\publish;D:\dev\2026\repos\ontly\src\JupyterSharp.Kernels.Ontly\bin\publish;D:\dev\MarcoParenzan\RalfAI\src\JupyterSharp.Kernels.Ralf\bin\publish"
+jupytersharp run samples/tour.ipynb --kernel-paths "D:\dev\2026\repos\PySharp\src\PySharp.JupyterSharp.Kernel\bin\publish;D:\dev\2026\repos\ontly\src\JupyterSharp.Kernels.Ontly\bin\publish;D:\dev\MarcoParenzan\RalfAI\src\JupyterSharp.Kernels.Ralf\bin\publish"
 
 # --output writes the executed notebook (with real outputs) elsewhere; --in-place overwrites the input
 jupytersharp run samples/tour.ipynb --output executed.ipynb
@@ -89,7 +89,7 @@ variable instead — every `jupytersharp`/`JupyterSharp.Host` invocation falls b
 
 ```powershell
 [Environment]::SetEnvironmentVariable('JUPYTERSHARP_KERNEL_PATHS',
-  'D:\dev\2026\repos\PySharp\src\JupyterSharp.Kernels.PySharp\bin\publish;D:\dev\2026\repos\ontly\src\JupyterSharp.Kernels.Ontly\bin\publish;D:\dev\MarcoParenzan\RalfAI\src\JupyterSharp.Kernels.Ralf\bin\publish',
+  'D:\dev\2026\repos\PySharp\src\PySharp.JupyterSharp.Kernel\bin\publish;D:\dev\2026\repos\ontly\src\JupyterSharp.Kernels.Ontly\bin\publish;D:\dev\MarcoParenzan\RalfAI\src\JupyterSharp.Kernels.Ralf\bin\publish',
   'User')
 ```
 

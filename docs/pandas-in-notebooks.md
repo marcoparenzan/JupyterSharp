@@ -9,8 +9,8 @@ CPython extension). Printing, results and error types are checked against real p
 Publish the PySharp kernel as described in [cvintro-course.md](cvintro-course.md) (the same publish carries pandas, numpy, matplotlib, OpenCV and torch):
 
 ```powershell
-dotnet publish D:\dev\2026\repos\PySharp\src\JupyterSharp.Kernels.PySharp -c Release -r win-x64 --self-contained false `
-    -o D:\dev\2026\repos\PySharp\src\JupyterSharp.Kernels.PySharp\bin\publish
+dotnet publish D:\dev\2026\repos\PySharp\src\PySharp.JupyterSharp.Kernel -c Release -r win-x64 --self-contained false `
+    -o D:\dev\2026\repos\PySharp\src\PySharp.JupyterSharp.Kernel\bin\publish
 ```
 
 Stop any running `JupyterSharp.Host` first (VS Code restarts it on the next cell). Then open a notebook with the **JupyterSharp** notebook type and use the

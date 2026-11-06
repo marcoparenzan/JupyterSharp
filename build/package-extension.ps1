@@ -38,7 +38,7 @@ dotnet publish (Join-Path $root "src/JupyterSharp.Host/JupyterSharp.Host.csproj"
 $plugins = @(
     # PySharpExternalNatives leaves libtorch and OpenCV out of the package (they are installed by ScienceSharp\Install-Natives.ps1).
     # Pass -BundleNatives to put them back, for a fully self-contained package.
-    @{ Name = "pysharp"; Project = (Join-Path $root "../PySharp/src/JupyterSharp.Kernels.PySharp/JupyterSharp.Kernels.PySharp.csproj"); Properties = @($(if ($BundleNatives) { "-p:PySharpExternalNatives=false" } else { "-p:PySharpExternalNatives=true" })) }
+    @{ Name = "pysharp"; Project = (Join-Path $root "../PySharp/src/PySharp.JupyterSharp.Kernel/PySharp.JupyterSharp.Kernel.csproj"); Properties = @($(if ($BundleNatives) { "-p:PySharpExternalNatives=false" } else { "-p:PySharpExternalNatives=true" })) }
     # Ontly and Ralf plugins live in repos outside this suite and are still built against JupyterNet.Kernels.Abstractions,
     # so the host cannot load them yet; add them here once they target JupyterSharp.Kernels.Abstractions.
 )

@@ -192,7 +192,7 @@ language, not a scripting one) — so `weather.City` works here exactly like eve
 `weather.TempC(3)` does not. That's a real difference in what this kernel can do with an injected
 object, not a bug to fix.
 
-**PySharp** (plugin, `D:\dev\2026\repos\PySharp\src\JupyterSharp.Kernels.PySharp`) — one `PyEngine`
+**PySharp** (plugin, `D:\dev\2026\repos\PySharp\src\PySharp.JupyterSharp.Kernel`) — one `PyEngine`
 per session. `PyEngine.Run` always starts a fresh `__main__` module seeded only from
 `PyEngine.Globals`, so there is no built-in "REPL" mode: `PySharpKernel` gets the same effect
 itself, by copying every non-dunder name out of the finished module's `PyModule.Dict` back into

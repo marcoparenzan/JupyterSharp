@@ -66,7 +66,7 @@ inject live objects into a kernel's context — see [samples/EmbeddingSample](sa
   PySharp notebooks, including the full 61-notebook cvintro course.
 
 The PySharp/Ontly/Ralf kernel plugins themselves live beside the engine they wrap:
-`D:\dev\2026\repos\PySharp\src\JupyterSharp.Kernels.PySharp`,
+`D:\dev\2026\repos\PySharp\src\PySharp.JupyterSharp.Kernel`,
 `D:\dev\2026\repos\ontly\src\JupyterSharp.Kernels.Ontly`,
 `D:\dev\MarcoParenzan\RalfAI\src\JupyterSharp.Kernels.Ralf` — not in this repo.
 
