@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.3.1-net11-preview.6 — every kernel is a plugin (not packed, not published)
+
+- `JupyterSharp.Engine` no longer references any kernel project: `NotebookSession` creates kernels only from `IKernelPlugin`s. The four kernels
+  JupyterSharp ships got a plugin class each (`CSharpKernelPlugin`, `FSharpKernelPlugin`, `PowerShellKernelPlugin`, `PowerFxKernelPlugin`) and are
+  published into `kernels/<id>/` next to the host and the CLI by the new `build/BundledKernels.targets`.
+- `KernelPluginLoader` always searches `<host>/kernels/*`, then `--kernel-paths` / `JUPYTERSHARP_KERNEL_PATHS` (they no longer replace the bundled folder);
+  a later directory wins on the same id. Plugin dependencies that a package ships per platform are resolved through the plugin's `.deps.json`.
+- `NotebookSession(..., plugins:)` for kernels given in code, `NotebookSession.KernelIds`, and an "unknown kernel" error that lists the installed ones.
+  `INotebookHost.NotebookPath` (default member) so the C# plugin keeps resolving `#r`/`#load` against the notebook's folder.
+- `jupytersharp kernels` and `JupyterSharp.Host --list-kernels` print the installed ids.
+- Removed `JupyterSharp.Protocol.KernelIds` and the extension's `KernelIds`; the extension reads its notebook languages from `package.json`, which
+  `build/package-extension.ps1` regenerates from the packaged host. The package script also publishes `matsharp` and `ndsharp` (not run yet).
+- Tests: 73/73 (7 new: the Engine references no kernel assembly, each plugin's id, the kernel list, unknown-kernel messages, the notebook path through the plugin).
+
 ## 0.3.1-net11-preview.4 — `#r "nuget:"` and top-level `using var` (packed to the local feed only, not published)
 
 Found while running the 14 NDSharp notebooks in JupyterSharp: none could run, because they reference their packages with `#r "nuget: Id, Version"`.

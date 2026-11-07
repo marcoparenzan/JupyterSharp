@@ -8,7 +8,7 @@ public class NotebookSessionTests
     [Fact]
     public async Task RunsCellsAcrossBothBuiltinKernelsInOneSession()
     {
-        var session = new NotebookSession();
+        var session = TestSessions.WithBundledKernels();
         var sink = new TestSink();
 
         Assert.True(await session.ExecuteAsync("csharp", "var x = 1;", sink, default));
@@ -24,7 +24,7 @@ public class NotebookSessionTests
     [Fact]
     public async Task UnknownKernelReturnsFalseAndWritesErrorInsteadOfThrowing()
     {
-        var session = new NotebookSession();
+        var session = TestSessions.WithBundledKernels();
         var sink = new TestSink();
 
         var ok = await session.ExecuteAsync("no-such-kernel", "whatever", sink, default);
@@ -36,7 +36,7 @@ public class NotebookSessionTests
     [Fact]
     public async Task ExecuteCellAtAnUnknownIndexIsAnErrorNotAnException()
     {
-        var session = new NotebookSession();
+        var session = TestSessions.WithBundledKernels();
         var sink = new TestSink();
 
         var ok = await session.ExecuteCellAsync(99, sink, default);
@@ -48,7 +48,7 @@ public class NotebookSessionTests
     [Fact]
     public async Task RunCellAsyncThroughINotebookHostBuffersOutputAsText()
     {
-        var session = new NotebookSession();
+        var session = TestSessions.WithBundledKernels();
         session.UpdateCells([new NotebookCellInfo(0, "csharp", "42")]);
 
         var text = await ((INotebookHost)session).RunCellAsync(0, default);
@@ -59,7 +59,7 @@ public class NotebookSessionTests
     [Fact]
     public async Task SetVariableOnAnUnknownKernelThrows()
     {
-        var session = new NotebookSession();
+        var session = TestSessions.WithBundledKernels();
         await Assert.ThrowsAsync<InvalidOperationException>(() => session.SetVariableAsync("no-such-kernel", "x", 1, default));
     }
 }

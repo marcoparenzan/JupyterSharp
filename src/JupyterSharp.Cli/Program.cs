@@ -1,6 +1,15 @@
 using JupyterSharp.Engine;
 using JupyterSharp.Kernels.Abstractions;
 
+if (args.Length > 0 && args[0] == "kernels")
+{
+    // The kernels this CLI can run: its own kernels/ folder plus --kernel-paths (or JUPYTERSHARP_KERNEL_PATHS).
+    string[]? listPaths = args.Length > 2 && args[1] == "--kernel-paths"
+        ? args[2].Split(Path.PathSeparator, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries) : null;
+    foreach (var id in new NotebookSession(pluginWarnings: Console.Error, kernelPathsOverride: listPaths).KernelIds) Console.WriteLine(id);
+    return 0;
+}
+
 if (args.Length == 0 || args[0] != "run")
 {
     PrintUsage();
@@ -66,8 +75,11 @@ static void PrintUsage()
 {
     Console.Error.WriteLine("""
         jupytersharp run <notebook.ipynb> [--kernel-paths p1;p2;p3] [--output <file>] [--in-place] [--fail-fast]
+        jupytersharp kernels [--kernel-paths p1;p2;p3]
 
-          --kernel-paths  Kernel plugin directories (OS path-list), overriding JUPYTERSHARP_KERNEL_PATHS.
+          kernels         List the ids of the installed kernels, one per line.
+          --kernel-paths  Kernel plugin directories (OS path-list), used instead of JUPYTERSHARP_KERNEL_PATHS;
+                          the kernels/ folder next to jupytersharp (csharp, fsharp, powershell, powerfx) is always searched.
           --output <file> Write the executed notebook (with outputs) to <file>; the input is left untouched.
           --in-place      Write the executed notebook (with outputs) back to <notebook.ipynb>.
           --fail-fast     Stop at the first cell whose output includes an error, instead of running the rest.

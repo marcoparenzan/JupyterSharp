@@ -1,0 +1,34 @@
+<Project>
+  <!--
+    Every kernel is a plugin, including the four JupyterSharp ships: a host loads all of them from kernels/<id>/
+    next to its own assembly (see KernelPluginLoader), and knows none of them by name. Imported by JupyterSharp.Host
+    and JupyterSharp.Cli: after Build each kernel is published into $(OutDir)kernels/<id>/, after Publish into
+    $(PublishDir)kernels/<id>/ (which is also what a dotnet tool package and the VS Code extension carry).
+
+    The ProjectReferences only order the build and bring the kernels into the restore graph: the host does not
+    reference their assemblies (ReferenceOutputAssembly=false), so it cannot construct a kernel itself.
+  -->
+  <ItemGroup>
+    <ProjectReference Include="$(MSBuildThisFileDirectory)../src/JupyterSharp.Kernels.CSharp/JupyterSharp.Kernels.CSharp.csproj" BundledKernel="csharp" ReferenceOutputAssembly="false" Private="false" PrivateAssets="all" />
+    <ProjectReference Include="$(MSBuildThisFileDirectory)../src/JupyterSharp.Kernels.FSharp/JupyterSharp.Kernels.FSharp.csproj" BundledKernel="fsharp" ReferenceOutputAssembly="false" Private="false" PrivateAssets="all" />
+    <ProjectReference Include="$(MSBuildThisFileDirectory)../src/JupyterSharp.Kernels.PowerShell/JupyterSharp.Kernels.PowerShell.csproj" BundledKernel="powershell" ReferenceOutputAssembly="false" Private="false" PrivateAssets="all" />
+    <ProjectReference Include="$(MSBuildThisFileDirectory)../src/JupyterSharp.Kernels.PowerFx/JupyterSharp.Kernels.PowerFx.csproj" BundledKernel="powerfx" ReferenceOutputAssembly="false" Private="false" PrivateAssets="all" />
+  </ItemGroup>
+
+  <Target Name="_CollectBundledKernels">
+    <ItemGroup>
+      <_BundledKernel Include="@(ProjectReference)" Condition="'%(ProjectReference.BundledKernel)' != ''" />
+    </ItemGroup>
+  </Target>
+
+  <Target Name="PublishBundledKernelsAfterBuild" AfterTargets="Build" DependsOnTargets="_CollectBundledKernels"
+          Condition="'$(_IsPublishing)' != 'true'">
+    <MSBuild Projects="@(_BundledKernel)" Targets="Publish"
+             Properties="NoBuild=true;Configuration=$(Configuration);PublishDir=$(OutDir)kernels/%(_BundledKernel.BundledKernel)/" />
+  </Target>
+
+  <Target Name="PublishBundledKernelsAfterPublish" AfterTargets="Publish" DependsOnTargets="_CollectBundledKernels">
+    <MSBuild Projects="@(_BundledKernel)" Targets="Publish"
+             Properties="NoBuild=true;Configuration=$(Configuration);PublishDir=$(PublishDir)kernels/%(_BundledKernel.BundledKernel)/" />
+  </Target>
+</Project>

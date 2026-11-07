@@ -54,9 +54,9 @@ is not tied to one specific request (see below) and carries `executionId: ""`.
 
 ## Kernel ids
 
-`csharp`, `fsharp`, `powershell`, `pysharp`, `ontly`, `ralf` — see `JupyterSharp.Protocol.KernelIds` / `protocol.ts`'s
-`KernelIds`. Each is a language id a notebook cell can be set to; `JupyterSharp.Host` creates the
-matching `IKernel` lazily, the first time that language is used in a session, and keeps it (and
-its state) for the rest of the session. `csharp`/`fsharp`/`powershell` are builtin; `pysharp`/`ontly`/`ralf` are
-kernel plugins discovered at startup (see ARCHITECTURE.md's "Plugin loading") — the ids here are
-each plugin's own declared `IKernelPlugin.KernelId`, not something the host enforces.
+The protocol names no kernel (the `KernelIds` list was removed on 2026-11-07: it could only ever be a stale copy). `kernel` in an
+`execute` request is the `IKernelPlugin.KernelId` of an installed kernel, as printed by `JupyterSharp.Host --list-kernels`
+(`csharp`, `fsharp`, `powershell`, `powerfx` ship with the host; `pysharp`, `matsharp`, `ndsharp` are the kernels of the libraries).
+`JupyterSharp.Host` creates the matching `IKernel` lazily, the first time that language is used in a session, and keeps it (and
+its state) for the rest of the session. All kernels are plugins discovered at startup (see ARCHITECTURE.md's
+"Plugin loading"). An id no plugin serves gives an `error` event that lists the installed ids.

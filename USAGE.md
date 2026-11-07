@@ -15,7 +15,7 @@ code --install-extension JupyterSharp\vscode-extension\jupytersharp-notebook-win
 ```
 
 Build the extension packages with `build/package-extension.ps1 -Runtime win-x64|linux-x64|osx-arm64` (43-46 MB each). The PySharp plugin in them has no libtorch or OpenCV: install those with `ScienceSharp\Install-Natives.ps1`, or build with `-BundleNatives` for a self-contained package of about 350 MB on Windows. The PySharp kernel plugin is
-bundled; the Ontly and Ralf plugins are not (they still use the old JupyterNet package). Only Windows x64 has been run.
+bundled (MatSharp and NDSharp were added to the package script and have not been packaged yet); the Ontly and Ralf plugins are not (they still use the old JupyterNet package). Only Windows x64 has been run.
 Everything below is the detailed setup: prerequisites, building from source, the host protocol, embedding.
 
 ## Prerequisites
@@ -49,8 +49,8 @@ dotnet test tests/JupyterSharp.Tests
 
 `JupyterSharp.Host` reads NDJSON requests on stdin and writes NDJSON events on stdout — see
 [docs/protocol.md](docs/protocol.md). To try it directly without VS Code (`csharp`/`fsharp`/`powershell`/`powerfx` work
-with no further setup; `pysharp`/`ontly`/`ralf` need the plugin publish step above and
-`JUPYTERSHARP_KERNEL_PATHS` pointed at those three `bin/publish` folders, `;`-separated):
+with no further setup, because they are plugins published into the host's own `kernels/` folder; `pysharp`, `matsharp` and `ndsharp` need
+their plugin publish step and `JUPYTERSHARP_KERNEL_PATHS` pointed at their `bin/publish` folders, `;`-separated; `JupyterSharp.Host --list-kernels` prints the ids found):
 
 ```powershell
 '{"id":"1","method":"execute","params":{"kernel":"csharp","code":"21 * 2"}}' | dotnet run --project src/JupyterSharp.Host
@@ -60,7 +60,7 @@ with no further setup; `pysharp`/`ontly`/`ralf` need the plugin publish step abo
 
 No VS Code, no editor — `jupytersharp run` executes a `.ipynb`'s cells top to bottom and exits `0`
 only if every one of them ran without error (handy in CI, or just from a terminal). Install it once
-as a real command (same pattern as `pysharp`/`ontly`/`ralf`), or use `dotnet run` straight from the
+as a real command (same pattern as `pysharp`), or use `dotnet run` straight from the
 repo while developing:
 
 ```powershell
@@ -119,7 +119,7 @@ dotnet run --project samples/EmbeddingSample
 ```
 
 `SetVariableAsync` only works on a kernel that implements `IVariableInjectable` — today that's
-`csharp`, `fsharp`, `powershell` and `powerfx` (the four builtin kernels); a kernel that doesn't throws `NotSupportedException`
+`csharp`, `fsharp`, `powershell` and `powerfx` (the four kernels JupyterSharp ships); a kernel that doesn't throws `NotSupportedException`
 rather than silently doing nothing. See ARCHITECTURE.md's "Engine, CLI and embedding" section for
 how each of the four actually makes an injected object usable from cell code (PowerFx's own version
 only exposes an injected object's properties, not its methods).
@@ -143,7 +143,7 @@ window:
   default for every `.ipynb` in that workspace.
 - Run **JupyterSharp: New Notebook**, or open `samples/tour.ipynb` from the repo root.
 - Each cell picks its language from VS Code's usual cell-language picker: `csharp`, `fsharp`,
-  `powershell`, `powerfx`, `pysharp`, `ontly` or `ralf`.
+  `powershell`, `powerfx`, `pysharp`, `matsharp` or `ndsharp`: the languages listed in the extension's `package.json`, one per bundled kernel.
 - Run a cell with the usual ▷ button/`Ctrl+Enter`. The first cell of a session starts a
   `JupyterSharp.Host` process for that notebook (visible, if needed, in the **JupyterSharp** output channel —
   stderr from the host lands there, including a warning per kernel plugin that failed to load);
@@ -155,7 +155,7 @@ The extension looks for the host in this order: the `jupytersharp.hostDll` setti
 else it falls back automatically to `src/JupyterSharp.Host/bin/{Debug,Release}/net11.0/JupyterSharp.Host.dll`
 in the repo, so a plain `dotnet build` is enough while developing — no setting to configure.
 
-`jupytersharp.kernelPaths` (an array setting) is where the `pysharp`/`ontly`/`ralf` plugins are found —
+`jupytersharp.kernelPaths` (an array setting) is where the library plugins (`pysharp`, `matsharp`, `ndsharp`) are found, in addition to the host's own `kernels/` folder —
 forwarded to the host as `JUPYTERSHARP_KERNEL_PATHS`. It defaults to this machine's three plugin
 repos' own `bin/publish` output (see Prerequisites); override it if those repos live elsewhere, or
 point it at `<extension folder>/host/kernels/*` if you installed a packaged `.vsix` that bundled
@@ -231,10 +231,10 @@ List the cells in this notebook, then run the first PySharp cell and tell me wha
 
 ```powershell
 ./build/pack.ps1               # dotnet pack this repo's own projects (incl. Engine, Cli) -> D:\dev\NuGetLocalFeed
-./build/package-extension.ps1  # publish JupyterSharp.Host + the 3 plugins into vscode-extension/host + build a .vsix
+./build/package-extension.ps1  # publish JupyterSharp.Host (+ its 4 kernels) and the PySharp, MatSharp, NDSharp plugins into vscode-extension/host + build a .vsix
 ```
 
-`package-extension.ps1` bundles the three plugins into `vscode-extension/host/kernels/<name>/` so
-a packaged `.vsix` works standalone, without the PySharp/ontly/RalfAI repos present — that bundled
-path is exactly `KernelPluginLoader`'s fallback (`<host base dir>/kernels/*`), used automatically
-whenever `jupytersharp.kernelPaths` isn't set to something else.
+`package-extension.ps1` bundles the library plugins into `vscode-extension/host/kernels/<name>/` (the host's build already put its four
+kernels there) so a packaged `.vsix` works standalone, without the library repos present — that folder is always searched by
+`KernelPluginLoader` (`<host base dir>/kernels/*`). It then asks the packaged host for its kernel ids and rewrites
+`contributes.languages` in `package.json` to match, only when the list changed.

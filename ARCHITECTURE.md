@@ -16,7 +16,7 @@ NDJSON protocol wrapped around it. A kernel instance, created lazily on first us
 rest of the session, *is* the cell's session state (Roslyn's `ScriptState`, the F#
 `FsiEvaluationSession`, PySharp's `PyEngine.Globals`, the Ralf `AgentEngine`).
 
-## Kernels: four builtin, three plugins
+## Kernels: all plugins
 
 `IKernel`/`IKernelOutputSink`/`IKernelPlugin`
 ([src/JupyterSharp.Kernels.Abstractions](src/JupyterSharp.Kernels.Abstractions)) is the entire contract
@@ -49,11 +49,15 @@ interface IVariableInjectable
 implement it simply doesn't support injection, and `NotebookSession.SetVariableAsync` throws a
 clear `NotSupportedException` rather than pretending it worked.
 
-`csharp`, `fsharp`, `powershell` and `powerfx` are **builtin** — compiled straight into `JupyterSharp.Host`, no
-discovery needed. `pysharp`/`ontly`/`ralf` are **plugins**: each lives in its own engine's repo
-(PySharp/Ontly/RalfAI), builds a small project implementing `IKernelPlugin`, and gets loaded into
-the host at runtime — see "Plugin loading" below for why they're split out this way and how it
-works.
+**Every kernel is a plugin**, and the host knows none of them by name (changed 2026-11-07; before, `NotebookSession` created
+`csharp`/`fsharp`/`powershell`/`powerfx` with a `switch`, so the Engine referenced all four kernel projects and their
+dependencies, `FSharp.Compiler.Service` among them). Each kernel project has one `*KernelPlugin` class (`CSharpKernelPlugin`,
+`FSharpKernelPlugin`, `PowerShellKernelPlugin`, `PowerFxKernelPlugin`) implementing `IKernelPlugin`.
+`build/BundledKernels.targets`, imported by `JupyterSharp.Host` and `JupyterSharp.Cli`, publishes the four into
+`kernels/<id>/` next to the host (after Build and after Publish). The kernels of the libraries are the same thing, built in
+their own repos (`PySharp.JupyterSharp.Kernel`, `MatSharp.JupyterSharp.Kernel`, `NDSharp.JupyterSharp.Kernel`; the Ontly
+and Ralf kernels are not migrated, OPENPOINTS J-3). An embedding application that wants a kernel without a folder passes the plugin to
+`new NotebookSession(plugins: [...])` (the tests and the embedding sample do). See "Plugin loading" below.
 
 **CSharp** ([src/JupyterSharp.Kernels.CSharp](src/JupyterSharp.Kernels.CSharp)) — `CSharpScript.RunAsync`
 for the first cell, `ScriptState<object>.ContinueWithAsync` for every one after, so top-level
@@ -231,19 +235,22 @@ via `ProjectReference` rather than through NuGet.
 
 ## Plugin loading
 
-PySharp/Ontly/Ralf are split out of this repo on purpose: each engine's own repo should own how it
+Library kernels live outside this repo on purpose: each library's own repo should own how it
 plugs into a notebook, versioned and released on that engine's own schedule, not JupyterSharp's.
 That only works if the host can load a kernel it was never built against —
 [src/JupyterSharp.Engine/KernelPluginLoader.cs](src/JupyterSharp.Engine/KernelPluginLoader.cs) is the
 whole of that mechanism (in `JupyterSharp.Engine` precisely so `JupyterSharp.Host`, the CLI, and an
 embedding application all get it for free):
 
-- **Discovery**: search directories come from `JUPYTERSHARP_KERNEL_PATHS` (an OS path-list, one
-  directory per plugin — each is that plugin project's own `dotnet publish` output), falling back
-  to scanning `<host base dir>/kernels/*` if unset. The VS Code extension sets the environment
-  variable from its own `jupytersharp.kernelPaths` setting (default: this machine's three plugin
-  repos); a packaged `.vsix` instead bundles published copies under `host/kernels/*`, which is
-  exactly the fallback path, so it works without the setting.
+- **Discovery**: `<host base dir>/kernels/*` is always searched (the four shipped kernels, and whatever a package bundles),
+  then the directories of `JUPYTERSHARP_KERNEL_PATHS` or of the CLI's `--kernel-paths` (an OS path-list, one directory per
+  plugin — each is that plugin project's own `dotnet publish` output). A later directory wins over an earlier one with the
+  same kernel id, so a configured path replaces a bundled kernel during development. The VS Code extension sets the
+  environment variable from its own `jupytersharp.kernelPaths` setting; a packaged `.vsix` bundles published copies under
+  `host/kernels/*`, so it works without the setting. `jupytersharp kernels` and `JupyterSharp.Host --list-kernels` print the
+  ids found. A plugin's managed dependencies that a package ships per platform (`runtimes/<rid>/lib`, e.g. PowerShell's
+  `System.Management.Automation`) are resolved through the plugin's own `.deps.json` (`AssemblyDependencyResolver`), still in
+  the default load context.
 - **Loading**: `Assembly.LoadFrom(mainAssemblyPath)` — the one deliberately unglamorous choice
   here. `LoadFrom` comes with .NET's own "LoadFrom context" dependency probing: a dependency that
   can't otherwise be resolved is looked for beside the assembly that requested it, so everything
@@ -293,8 +300,7 @@ own inline, so that logic moved to a standalone library, [`JupyterSharp.Engine`]
   (`source` as newline-terminated line arrays, per-cell language in
   `metadata.vscode.languageId`, `display_data`/`error` outputs round-tripped). Nothing in this repo
   read `.ipynb` from C# before this — only the extension's TS side did.
-- **`NotebookSession`** — the reusable engine: owns the builtin (`csharp`/`fsharp`/`powershell`/`powerfx`) and
-  plugin-discovered kernels for one session, *is* the `INotebookHost` a Ralf-style kernel's tools
+- **`NotebookSession`** — the reusable engine: owns the kernels of one session (all of them from plugins, discovered or passed in code), *is* the `INotebookHost` a Ralf-style kernel's tools
   call against (`RequestCellEdit` becomes a plain `CellEditRequested` event instead of an NDJSON
   `editCell` — a headless host applies it however makes sense for it, e.g. the CLI updates its own
   in-memory `NotebookDocument` cell directly), and adds the two entry points a protocol-based host
@@ -328,7 +334,8 @@ no NDJSON — just a library call.
   `.ipynb` rather than silently taking over every notebook (a real concern once the Jupyter
   extension is also installed, which handles `.ipynb` for actual Python/Jupyter kernels).
 - `kernelController.ts` — one `NotebookController`
-  (`supportedLanguages = [csharp, fsharp, powershell, powerfx, pysharp, ontly, ralf]`, the same "pick a language per
+  (`supportedLanguages` is read from the extension's own `package.json` `contributes.languages`, which `build/package-extension.ps1`
+  regenerates from `JupyterSharp.Host --list-kernels`: one language per bundled kernel; the same "pick a language per
   cell" shape dotnet-interactive's polyglot notebooks used) per extension activation; one
   `HostClient`/host process per open notebook document, keyed by URI. `jupytersharp.kernelPaths`
   (a setting, array of directories) is forwarded to the spawned host as `JUPYTERSHARP_KERNEL_PATHS`.
@@ -350,11 +357,11 @@ no NDJSON — just a library call.
 - `Notebook_SetCellCode`'s effect is only visible to Ralf's *next* tool call in the same turn once
   the extension has applied the edit and a subsequent execute request has refreshed the cache —
   not instantaneous within the same tool call.
-- All kernels (builtin and plugin) share one load context; two plugins pinning conflicting
+- All kernels share one load context; two plugins pinning conflicting
   versions of the same dependency would collide (see "Why not per-plugin `AssemblyLoadContext`
   isolation" above). Native-library dependencies (e.g. under `runtimes/<rid>/native/`) still need
   the OS loader to find them through its own mechanism regardless.
-- `IVariableInjectable` is only implemented by the four builtin kernels, and the PowerFx kernel's
+- `IVariableInjectable` is only implemented by the four kernels JupyterSharp ships, and the PowerFx kernel's
   own implementation only exposes an injected object's *properties* (no methods — see the PowerFx
   section above). PySharp's own kernel has an equivalent native capability
   (`PyEngine.SetVariable`) not yet wired to the interface — a natural follow-up in that repo, not

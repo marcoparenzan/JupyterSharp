@@ -6,6 +6,14 @@ using JupyterSharp.Protocol;
 
 var stdout = Console.Out;
 var session = new NotebookSession(pluginWarnings: Console.Error);
+
+// `--list-kernels`: print the installed kernel ids and exit. The VS Code extension packaging uses it to declare
+// one notebook language per kernel actually bundled, instead of a list written by hand.
+if (args.Contains("--list-kernels"))
+{
+    foreach (var id in session.KernelIds) Console.WriteLine(id);
+    return;
+}
 session.CellEditRequested += (index, newCode) =>
     NdjsonProtocol.WriteEvent(stdout, HostEvent.EditCell(executionId: "", cellIndex: index, newCode: newCode));
 

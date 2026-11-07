@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
@@ -9,6 +9,8 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\JupyterSharp.Engine\JupyterSharp.Engine.csproj" />
+    <ProjectReference Include="..\..\src\JupyterSharp.Kernels.CSharp\JupyterSharp.Kernels.CSharp.csproj" />
+    <ProjectReference Include="..\..\src\JupyterSharp.Kernels.FSharp\JupyterSharp.Kernels.FSharp.csproj" />
   </ItemGroup>
 
 </Project>

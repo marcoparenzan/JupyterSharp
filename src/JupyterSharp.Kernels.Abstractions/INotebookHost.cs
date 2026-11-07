@@ -13,6 +13,10 @@ public interface INotebookHost
 {
     IReadOnlyList<NotebookCellInfo> Cells { get; }
 
+    /// <summary>The notebook's file, if it has one: the <c>csharp</c> kernel resolves relative <c>#r</c>/<c>#load</c> against its folder.
+    /// A default member, so hosts written before it existed keep compiling and report no path.</summary>
+    string? NotebookPath => null;
+
     /// <summary>Runs another cell (by the index the extension last reported) through its own kernel and returns its captured output as text.</summary>
     Task<string> RunCellAsync(int index, CancellationToken cancellationToken);
 

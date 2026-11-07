@@ -42,7 +42,7 @@ public class ImageOutputTests
     [Fact]
     public async Task CSharpCellsCanDisplayAnImage()
     {
-        var session = new NotebookSession();
+        var session = TestSessions.WithBundledKernels();
         var sink = new TestSink();
 
         var ok = await session.ExecuteAsync("csharp", "Display.Image(new byte[] { 1, 2, 3 });", sink, default);

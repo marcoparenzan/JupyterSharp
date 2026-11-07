@@ -7,7 +7,7 @@
   </PropertyGroup>
   <PropertyGroup>
     <PackageId>JupyterSharp.Kernels.PowerFx</PackageId>
-    <Version>0.3.1-net11-preview.5</Version>
+    <Version>0.3.1-net11-preview.6</Version>
     <Authors>Marco Parenzan</Authors>
     <Description>JupyterSharp kernel that evaluates Power Fx formulas on a single RecalcEngine, with session state (named formulas/Set()) shared across cells.</Description>
   </PropertyGroup>

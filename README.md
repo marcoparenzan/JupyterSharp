@@ -14,20 +14,21 @@
 | --- | --- | --- | --- | --- |
 
 A kernel host for **.NET notebooks in VS Code** — the itch [dotnet/interactive](https://github.com/dotnet/interactive)
-left unscratched once it stopped being developed. JupyterSharp ships four ".NET languages" itself
-(C#, F#, PowerShell, Power Fx) and is otherwise a small **plugin host**: PySharp, Ontly and Ralf each carry
-their own kernel plugin in their own repo, matching the engine's own release cycle rather than
-JupyterSharp's.
+left unscratched once it stopped being developed. JupyterSharp is a small **plugin host**: it knows no kernel by
+name. **Every kernel is a plugin** (`IKernelPlugin`), loaded from a `kernels/<id>/` folder. JupyterSharp ships
+four ".NET languages" as plugins of its own (C#, F#, PowerShell, Power Fx), published next to the host and the CLI;
+every library implements its own kernel in its own repo (`<Library>.JupyterSharp.Kernel`: PySharp, MatSharp,
+NDSharp), matching the library's release cycle rather than JupyterSharp's.
 
 | Cell language | Backed by |
 | --- | --- |
-| `csharp` | Roslyn scripting (`Microsoft.CodeAnalysis.CSharp.Scripting`) — builtin, a REPL-style C#, variables persist across cells. |
-| `fsharp` | `FSharp.Compiler.Service`'s `FsiEvaluationSession` — builtin, a real long-lived FSI session, so state just persists on its own. |
-| `powershell` | `Microsoft.PowerShell.SDK` — builtin, a real embedded PowerShell 7+ `Runspace`, so state persists the same way. |
-| `powerfx` | `Microsoft.PowerFx.Interpreter`'s `RecalcEngine` — builtin, a single formula engine per session; a cell is one formula, same shape as a Power Apps formula bar. |
-| `pysharp` | Plugin, from `D:\dev\2026\repos\PySharp` — a Python 3 interpreter written from scratch in C#, embedded via `PySharpLib.PyEngine`. |
-| `ontly` | Plugin, from `D:\dev\2026\repos\ontly` — a YAML domain-contract compiler; a cell is a contract, the output is its generated C#/Python. |
-| `ralf` | Plugin, from `D:\dev\MarcoParenzan\RalfAI` — RalfAI's own coding agent, embedded in-process with tools to inspect, run and edit the notebook's *other* cells. |
+| `csharp` | Roslyn scripting (`Microsoft.CodeAnalysis.CSharp.Scripting`) — shipped plugin, a REPL-style C#, variables persist across cells. |
+| `fsharp` | `FSharp.Compiler.Service`'s `FsiEvaluationSession` — shipped plugin, a real long-lived FSI session, so state just persists on its own. |
+| `powershell` | `Microsoft.PowerShell.SDK` — shipped plugin, a real embedded PowerShell 7+ `Runspace`, so state persists the same way. |
+| `powerfx` | `Microsoft.PowerFx.Interpreter`'s `RecalcEngine` — shipped plugin, a single formula engine per session; a cell is one formula, same shape as a Power Apps formula bar. |
+| `pysharp` | Plugin `PySharp.JupyterSharp.Kernel` (PySharp repo) — a Python 3 interpreter written from scratch in C#, embedded via `PySharpLib.PyEngine`. |
+| `matsharp` | Plugin `MatSharp.JupyterSharp.Kernel` (MatSharp repo) — MATLAB/Octave on `MatEngine`; figures are PNG outputs. |
+| `ndsharp` | Plugin `NDSharp.JupyterSharp.Kernel` (NDSharp repo) — C# with NDSharp and MathemaSharp already referenced and imported (`np.Sum(...)` with no `#r`). |
 
 Run code in cells, get HTML output, keep state between cells — the parts of dotnet/interactive
 that made it worth using, on top of tools already living under `D:\dev`. JupyterSharp is not only a
@@ -40,8 +41,8 @@ inject live objects into a kernel's context — see [samples/EmbeddingSample](sa
 
 - `src/JupyterSharp.Protocol` — the NDJSON message contracts shared by the host and the extension.
 - `src/JupyterSharp.Kernels.Abstractions` — `IKernel`/`IKernelOutputSink`/`INotebookHost`/
-  `IKernelPlugin`/`IVariableInjectable`, the entire contract a kernel (builtin or plugin) implements.
-- `src/JupyterSharp.Kernels.{CSharp,FSharp,PowerShell,PowerFx}` — the four builtin kernels.
+  `IKernelPlugin`/`IVariableInjectable`, the entire contract a kernel implements. The Engine references only this project.
+- `src/JupyterSharp.Kernels.{CSharp,FSharp,PowerShell,PowerFx}` — the four kernels JupyterSharp ships, each with a `*KernelPlugin` class; `build/BundledKernels.targets` publishes them into `kernels/<id>/` next to the host and the CLI.
 - `src/JupyterSharp.Engine` — the reusable core: `NotebookDocument` (a C# nbformat reader/writer),
   `NotebookSession` (kernel dispatch, plugin discovery, variable injection) — what `JupyterSharp.Host`,
   `JupyterSharp.Cli`, and any embedding application all build on.
@@ -51,13 +52,13 @@ inject live objects into a kernel's context — see [samples/EmbeddingSample](sa
 - `vscode-extension/` — the VS Code extension: notebook type `jupytersharp-notebook` for `*.ipynb`
   files (real Jupyter nbformat, offered as an option rather than hijacking every notebook), one
   multi-language `NotebookController`, an HTML output renderer.
-- `samples/tour.ipynb` — a notebook exercising all seven kernels. `samples/` also has one
+- `samples/tour.ipynb` — a notebook exercising the seven kernels of the first release (see the per-language samples; `ontly` and `ralf` do not load, J-3). `samples/` also has one
   per-language sample notebook (`csharp.ipynb`, `fsharp.ipynb`, `powershell.ipynb`,
   `powerfx.ipynb`, `pysharp.ipynb`, `ontly.ipynb`, `ralf.ipynb`), each focused on one kernel's own
   features. `samples/EmbeddingSample` — a console app embedding `JupyterSharp.Engine` directly and
   injecting a live object into a cell.
-- `tests/JupyterSharp.Tests` — xUnit coverage for the nbformat reader/writer, all four builtin kernels
-  (including variable injection), and `NotebookSession`'s dispatch/error handling.
+- `tests/JupyterSharp.Tests` — xUnit coverage for the nbformat reader/writer, the four shipped kernels
+  (including variable injection), the plugin contract (the Engine references no kernel) and `NotebookSession`'s dispatch/error handling.
 - `docs/protocol.md` — the wire protocol. [ARCHITECTURE.md](ARCHITECTURE.md) — how it all fits
   together, the plugin-loading design, and known limits. [USAGE.md](USAGE.md) — install and run
   it.
@@ -65,15 +66,13 @@ inject live objects into a kernel's context — see [samples/EmbeddingSample](sa
   [docs/cvintro-course.md](docs/cvintro-course.md) — running pandas/numpy/OpenCV/torch-backed
   PySharp notebooks, including the full 61-notebook cvintro course.
 
-The PySharp/Ontly/Ralf kernel plugins themselves live beside the engine they wrap:
-`D:\dev\2026\repos\PySharp\src\PySharp.JupyterSharp.Kernel`,
-`D:\dev\2026\repos\ontly\src\JupyterSharp.Kernels.Ontly`,
-`D:\dev\MarcoParenzan\RalfAI\src\JupyterSharp.Kernels.Ralf` — not in this repo.
+The library kernel plugins live beside the library they wrap, not in this repo: `PySharp/src/PySharp.JupyterSharp.Kernel`,
+`MatSharp/src/MatSharp.JupyterSharp.Kernel`, `NDSharp/src/NDSharp.JupyterSharp.Kernel`. The Ontly and Ralf kernels (other repos) are not migrated yet (J-3).
 
 ## Quick start
 
 ```powershell
-# build everything (host, CLI, engine, builtin kernels, tests, embedding sample)
+# build everything (host, CLI, engine, the four shipped kernels, tests, embedding sample)
 dotnet build JupyterSharp.slnx
 dotnet test tests/JupyterSharp.Tests
 
@@ -93,20 +92,20 @@ npm run compile
 # then F5 in VS Code to launch an Extension Development Host, and open samples/tour.ipynb
 ```
 
-To exercise the `pysharp`/`ontly`/`ralf` cells (in the CLI, the host, or the extension) you also
-need those three plugins published once — see [USAGE.md](USAGE.md) for the exact commands and
-where the extension/CLI expect to find them (`jupytersharp.kernelPaths`/`--kernel-paths`).
+The four shipped kernels need nothing more. To exercise the library kernels (`pysharp`, `matsharp`, `ndsharp`) in the
+CLI, the host, or the extension, publish them once — see [USAGE.md](USAGE.md) for the exact commands and where the
+extension/CLI look for them (`jupytersharp.kernelPaths`/`--kernel-paths`). `jupytersharp kernels` lists what is installed.
 
 ## Publishing
 
 `build/pack.ps1` packs the projects that live in this repo (`JupyterSharp.Protocol`,
 `Kernels.Abstractions`, `Kernels.CSharp`, `Kernels.FSharp`, `Kernels.PowerShell`, `Kernels.PowerFx`,
 `Engine`, `Host`, `Cli`) into
-`D:\dev\NuGetLocalFeed`. `build/package-extension.ps1` publishes `JupyterSharp.Host` *and* the three
-external kernel plugins into `vscode-extension/host/`, then packages the extension as a `.vsix`.
+`D:\dev\NuGetLocalFeed`. `build/package-extension.ps1` publishes `JupyterSharp.Host` (with the four shipped
+kernels in `host/kernels/`) *and* the library kernel plugins (PySharp, MatSharp, NDSharp) into `vscode-extension/host/`, then packages the extension as a `.vsix`.
 
-`JupyterSharp.Cli` packs as a real `dotnet tool` (`jupytersharp` on PATH), the same pattern PySharp/
-Ontly/RalfAI already use for `pysharp`/`ontly`/`ralf`:
+`JupyterSharp.Cli` packs as a real `dotnet tool` (`jupytersharp` on PATH), the same pattern PySharp
+uses for `pysharp`:
 
 ```powershell
 ./build/pack.ps1

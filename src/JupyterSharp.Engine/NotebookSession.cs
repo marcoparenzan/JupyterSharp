@@ -1,14 +1,9 @@
 using JupyterSharp.Kernels.Abstractions;
-using JupyterSharp.Kernels.CSharp;
-using JupyterSharp.Kernels.FSharp;
-using JupyterSharp.Kernels.PowerShell;
-using JupyterSharp.Kernels.PowerFx;
 
 namespace JupyterSharp.Engine;
 
 /// <summary>
-/// The reusable engine behind every JupyterSharp host: owns the builtin (<c>csharp</c>/<c>fsharp</c>/
-/// <c>powershell</c>/<c>powerfx</c>) and discovered-plugin kernels for one notebook session, dispatches cell execution to them, and
+/// The reusable engine behind every JupyterSharp host: owns the kernels of one notebook session, dispatches cell execution to them, and
 /// is itself the <see cref="INotebookHost"/> a Ralf-style kernel's tools call against. Used by
 /// <c>JupyterSharp.Host</c> (wrapping it in the NDJSON protocol), the <c>jupytersharp</c> CLI (wrapping
 /// it in a headless run loop), and directly by any embedding application — see
@@ -17,7 +12,7 @@ namespace JupyterSharp.Engine;
 public sealed class NotebookSession : INotebookHost
 {
     private readonly Dictionary<string, IKernel> _kernels = new();
-    private readonly IReadOnlyDictionary<string, IKernelPlugin> _plugins;
+    private readonly Dictionary<string, IKernelPlugin> _plugins;
     private IReadOnlyList<NotebookCellInfo> _cells = [];
 
     /// <summary>Raised when a kernel (Ralf's <c>Notebook_SetCellCode</c> tool, in practice) asks to overwrite a cell's source.
@@ -25,14 +20,26 @@ public sealed class NotebookSession : INotebookHost
     /// (the CLI, an embedding app) can instead apply it directly to its own in-memory <see cref="NotebookDocument"/>.</summary>
     public event Action<int, string>? CellEditRequested;
 
+    /// <summary>
+    /// The session knows no kernel by name: every kernel is an <see cref="IKernelPlugin"/>, discovered in the host's
+    /// <c>kernels/</c> folder and the configured kernel paths (see <see cref="KernelPluginLoader"/>), or passed in
+    /// <paramref name="plugins"/> by an application that references a kernel package directly. A plugin in
+    /// <paramref name="plugins"/> wins over a discovered one with the same id.
+    /// </summary>
     /// <param name="pluginWarnings">Where plugin-discovery warnings go (a missing/broken kernel plugin directory) — defaults to discarding them.</param>
-    /// <param name="kernelPathsOverride">Explicit plugin search directories, bypassing <c>JUPYTERSHARP_KERNEL_PATHS</c>/the `kernels/` fallback (the CLI's <c>--kernel-paths</c>).</param>
+    /// <param name="kernelPathsOverride">Explicit plugin search directories, used instead of <c>JUPYTERSHARP_KERNEL_PATHS</c> (the CLI's <c>--kernel-paths</c>); the host's own <c>kernels/</c> folder is searched in any case.</param>
     /// <param name="notebookPath">The notebook's file, if it has one — see <see cref="NotebookPath"/>.</param>
-    public NotebookSession(TextWriter? pluginWarnings = null, IEnumerable<string>? kernelPathsOverride = null, string? notebookPath = null)
+    /// <param name="plugins">Kernels given in code instead of discovered from folders.</param>
+    public NotebookSession(TextWriter? pluginWarnings = null, IEnumerable<string>? kernelPathsOverride = null, string? notebookPath = null,
+                           IEnumerable<IKernelPlugin>? plugins = null)
     {
-        _plugins = KernelPluginLoader.DiscoverPlugins(pluginWarnings ?? TextWriter.Null, kernelPathsOverride);
+        _plugins = new Dictionary<string, IKernelPlugin>(KernelPluginLoader.DiscoverPlugins(pluginWarnings ?? TextWriter.Null, kernelPathsOverride));
+        foreach (var plugin in plugins ?? []) _plugins[plugin.KernelId] = plugin;
         NotebookPath = notebookPath;
     }
+
+    /// <summary>The ids of the kernels this session can run, in alphabetical order: what a notebook cell's language can be.</summary>
+    public IReadOnlyList<string> KernelIds => _plugins.Keys.Order(StringComparer.Ordinal).ToList();
 
     /// <summary>
     /// The notebook's file path. The <c>csharp</c> kernel compiles its cells as if they lived in this file, so relative
@@ -48,25 +55,19 @@ public sealed class NotebookSession : INotebookHost
     public void UpdateCells(IReadOnlyList<NotebookCellInfo> cells) => _cells = cells;
 
     /// <summary>
-    /// Gets (creating and caching on first use, exactly like a builtin kernel) the kernel for
-    /// <paramref name="kernelId"/> — <c>csharp</c>/<c>fsharp</c>/<c>powershell</c>/<c>powerfx</c> directly,
-    /// anything else from a discovered plugin. Throws if the id matches neither; callers executing
+    /// Gets (creating and caching on first use) the kernel for <paramref name="kernelId"/> from its plugin.
+    /// Throws if no plugin serves that id; callers executing
     /// a cell should prefer <see cref="ExecuteAsync"/>, which turns that into a normal
     /// <see cref="IKernelOutputSink.WriteError"/>.
     /// </summary>
     public IKernel GetOrCreateKernel(string kernelId)
     {
         if (_kernels.TryGetValue(kernelId, out var existing)) return existing;
-        IKernel created = kernelId switch
-        {
-            KernelIdsLocal.CSharp => new CSharpKernel(NotebookPath),
-            KernelIdsLocal.FSharp => new FSharpKernel(),
-            KernelIdsLocal.PowerShell => new PowerShellKernel(),
-            KernelIdsLocal.PowerFx => new PowerFxKernel(),
-            _ when _plugins.TryGetValue(kernelId, out var plugin) => plugin.CreateKernel(this),
-            _ => throw new InvalidOperationException($"Unknown kernel '{kernelId}'.")
-        };
-        return _kernels[kernelId] = created;
+        if (!_plugins.TryGetValue(kernelId, out var plugin))
+            throw new InvalidOperationException(_plugins.Count == 0
+                ? $"Unknown kernel '{kernelId}': no kernel is installed (no kernels/ folder next to the host and no kernel paths)."
+                : $"Unknown kernel '{kernelId}'. Installed kernels: {string.Join(", ", KernelIds)}.");
+        return _kernels[kernelId] = plugin.CreateKernel(this);
     }
 
     /// <summary>Runs one cell's code through its kernel. Returns false (after a <see cref="IKernelOutputSink.WriteError"/>) instead of throwing for an unknown kernel id or a kernel exception.</summary>
@@ -124,15 +125,6 @@ public sealed class NotebookSession : INotebookHost
     }
 
     void INotebookHost.RequestCellEdit(int index, string newCode) => CellEditRequested?.Invoke(index, newCode);
-}
-
-/// <summary>Local copies of the builtin kernel ids, to avoid a ProjectReference on JupyterSharp.Protocol just for a few string constants.</summary>
-internal static class KernelIdsLocal
-{
-    public const string CSharp = "csharp";
-    public const string FSharp = "fsharp";
-    public const string PowerShell = "powershell";
-    public const string PowerFx = "powerfx";
 }
 
 /// <summary>Wraps a sink to track whether <see cref="IKernelOutputSink.WriteError"/> was ever called, regardless of which concrete sink a caller passed in.</summary>

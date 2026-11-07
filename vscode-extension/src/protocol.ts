@@ -34,13 +34,3 @@ export interface HostEvent {
     /** "base64" when `data` carries binary output (an image) instead of text. */
     encoding?: "base64";
 }
-
-export const KernelIds = {
-    CSharp: "csharp",
-    FSharp: "fsharp",
-    PowerShell: "powershell",
-    PowerFx: "powerfx",
-    PySharp: "pysharp",
-    Ontly: "ontly",
-    Ralf: "ralf"
-} as const;

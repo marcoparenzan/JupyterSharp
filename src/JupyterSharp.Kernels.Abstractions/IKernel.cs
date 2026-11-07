@@ -28,7 +28,7 @@ public interface IKernelOutputSink
 /// </summary>
 public interface IKernel
 {
-    /// <summary>The language id this kernel handles — one of <see cref="Protocol.KernelIds"/>.</summary>
+    /// <summary>The language id this kernel handles: the <see cref="IKernelPlugin.KernelId"/> of the plugin that created it.</summary>
     string Id { get; }
 
     Task ExecuteAsync(string code, IKernelOutputSink sink, CancellationToken cancellationToken);
@@ -48,10 +48,12 @@ public interface IVariableInjectable
 }
 
 /// <summary>
-/// The entire contract an external kernel plugin (PySharp/Ontly/Ralf — each living in its own
-/// engine's repo, not JupyterSharp's) exposes to JupyterSharp.Host. One public, parameterless-
-/// constructor class per plugin assembly implements this; the host finds it by scanning the
-/// assembly's types, so there is nothing else to register or configure.
+/// The entire contract a kernel exposes to a JupyterSharp host. Every kernel is a plugin, the four
+/// shipped with JupyterSharp (csharp, fsharp, powershell, powerfx) exactly like the ones each library
+/// implements in its own repo (PySharp, MatSharp, NDSharp, ...): the host knows no kernel by name.
+/// One public, parameterless-constructor class per plugin assembly implements this; a host finds it by
+/// scanning the assembly's types (a <c>kernels/&lt;id&gt;</c> folder), or an embedding application passes
+/// an instance to <c>NotebookSession</c> directly, so there is nothing else to register or configure.
 /// </summary>
 public interface IKernelPlugin
 {

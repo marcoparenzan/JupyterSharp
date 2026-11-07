@@ -4,10 +4,19 @@ import * as vscode from "vscode";
 import { HostClient } from "./hostClient";
 import { HostEvent, NotebookCellSnapshot } from "./protocol";
 
-const SUPPORTED_LANGUAGES = ["csharp", "fsharp", "powershell", "powerfx", "pysharp", "ontly", "ralf"];
+/**
+ * The notebook languages are the kernels actually bundled with the extension: build/package-extension.ps1 asks the
+ * packaged JupyterSharp.Host for them (`--list-kernels`) and writes one `contributes.languages` entry per kernel id,
+ * so there is no list to keep in step here. VS Code only accepts languages declared in package.json, which is why
+ * the list lives there and not in a message from the host.
+ */
+function bundledKernelLanguages(context: vscode.ExtensionContext): string[] {
+    const languages = (context.extension.packageJSON?.contributes?.languages ?? []) as { id: string }[];
+    return languages.map((language) => language.id);
+}
 
 /**
- * One `NotebookController` for all four JupyterSharp languages (matching how a polyglot notebook picks
+ * One `NotebookController` for every JupyterSharp kernel language (matching how a polyglot notebook picks
  * a language per cell rather than per kernel). Keeps one `HostClient` — one `JupyterSharp.Host` process —
  * per open notebook document, so kernel session state (C#/PySharp variables, the Ralf agent) lives
  * for as long as the notebook stays open.
@@ -22,7 +31,7 @@ export class JupyterSharpController implements vscode.Disposable {
     constructor(private readonly context: vscode.ExtensionContext) {
         this.outputChannel = vscode.window.createOutputChannel("JupyterSharp");
         this.controller = vscode.notebooks.createNotebookController("jupytersharp-controller", "jupytersharp-notebook", "JupyterSharp");
-        this.controller.supportedLanguages = SUPPORTED_LANGUAGES;
+        this.controller.supportedLanguages = bundledKernelLanguages(context);
         this.controller.supportsExecutionOrder = true;
         this.controller.executeHandler = (cells, notebook) => this.executeAll(cells, notebook);
 

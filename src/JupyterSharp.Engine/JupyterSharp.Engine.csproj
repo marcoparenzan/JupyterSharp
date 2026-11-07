@@ -7,15 +7,11 @@
   </PropertyGroup>
   <PropertyGroup>
     <PackageId>JupyterSharp.Engine</PackageId>
-    <Version>0.3.1-net11-preview.5</Version>
+    <Version>0.3.1-net11-preview.6</Version>
     <Authors>Marco Parenzan</Authors>
-    <Description>Reusable JupyterSharp engine: nbformat (.ipynb) read/write, kernel plugin discovery, and NotebookSession — the kernel-dispatch/variable-injection core JupyterSharp.Host, the jupytersharp CLI, and any embedding application all build on.</Description>
+    <Description>Reusable JupyterSharp engine: nbformat (.ipynb) read/write, kernel plugin discovery (every kernel is a plugin; the engine references none), and NotebookSession — the kernel-dispatch/variable-injection core JupyterSharp.Host, the jupytersharp CLI, and any embedding application all build on.</Description>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\JupyterSharp.Kernels.Abstractions\JupyterSharp.Kernels.Abstractions.csproj" />
-    <ProjectReference Include="..\JupyterSharp.Kernels.CSharp\JupyterSharp.Kernels.CSharp.csproj" />
-    <ProjectReference Include="..\JupyterSharp.Kernels.FSharp\JupyterSharp.Kernels.FSharp.csproj" />
-    <ProjectReference Include="..\JupyterSharp.Kernels.PowerShell\JupyterSharp.Kernels.PowerShell.csproj" />
-    <ProjectReference Include="..\JupyterSharp.Kernels.PowerFx\JupyterSharp.Kernels.PowerFx.csproj" />
   </ItemGroup>
 </Project>

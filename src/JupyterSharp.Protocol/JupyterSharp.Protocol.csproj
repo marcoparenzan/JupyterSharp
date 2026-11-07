@@ -7,7 +7,7 @@
   </PropertyGroup>
   <PropertyGroup>
     <PackageId>JupyterSharp.Protocol</PackageId>
-    <Version>0.3.1-net11-preview.5</Version>
+    <Version>0.3.1-net11-preview.6</Version>
     <Authors>Marco Parenzan</Authors>
     <Description>NDJSON message contracts shared by JupyterSharp.Host and the JupyterSharp VS Code extension.</Description>
   </PropertyGroup>

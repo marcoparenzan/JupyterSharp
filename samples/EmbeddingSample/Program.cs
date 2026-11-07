@@ -4,10 +4,11 @@ using JupyterSharp.Kernels.Abstractions;
 
 // The whole "embed a notebook in an application" story in one file: no process, no NDJSON, no VS
 // Code — just a NotebookSession, a plain .NET object injected into it, and a few cells that use
-// that object directly. csharp and fsharp are both builtin, so this runs standalone with nothing
-// else to build or publish first (pysharp/ontly/ralf would need JUPYTERSHARP_KERNEL_PATHS pointed at
-// their own repos, same as the CLI/host — see USAGE.md).
-var session = new NotebookSession();
+// that object directly. The engine knows no kernel: an embedding application picks the ones it wants,
+// here csharp and fsharp, by referencing their packages and passing their plugins, so this runs standalone
+// with nothing else to publish first (any other kernel — pysharp, ndsharp, matsharp — would come from a
+// folder in JUPYTERSHARP_KERNEL_PATHS, same as the CLI/host — see USAGE.md).
+var session = new NotebookSession(plugins: [new JupyterSharp.Kernels.CSharp.CSharpKernelPlugin(), new JupyterSharp.Kernels.FSharp.FSharpKernelPlugin()]);
 var sink = new ConsolePrintingSink();
 
 Console.WriteLine("--- csharp: injecting a Weather instance ---");

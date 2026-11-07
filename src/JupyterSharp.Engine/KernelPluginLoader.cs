@@ -6,12 +6,14 @@ using JupyterSharp.Kernels.Abstractions;
 namespace JupyterSharp.Engine;
 
 /// <summary>
-/// Discovers and loads external kernel plugins (PySharp/Ontly/Ralf, each living in its own engine's
-/// repo, not JupyterSharp's). Search directories come from <paramref name="kernelPathsOverride"/> if
-/// given (e.g. the CLI's <c>--kernel-paths</c>), else <c>JUPYTERSHARP_KERNEL_PATHS</c> (an OS
-/// path-list, one directory per plugin — each expected to be that plugin project's own
-/// <c>dotnet publish</c> output), falling back to scanning <c>&lt;host base dir&gt;/kernels/*</c> if
-/// neither is set.
+/// Discovers and loads kernel plugins. Every kernel is one: the four shipped with JupyterSharp
+/// (csharp, fsharp, powershell, powerfx), which JupyterSharp.Host and the CLI publish into their own
+/// <c>kernels/&lt;id&gt;</c> folders, and those each library implements in its own repo (PySharp, MatSharp,
+/// NDSharp, ...). The search always covers <c>&lt;host base dir&gt;/kernels/*</c>, then the directories of
+/// <paramref name="kernelPathsOverride"/> if given (e.g. the CLI's <c>--kernel-paths</c>), else of
+/// <c>JUPYTERSHARP_KERNEL_PATHS</c> (an OS path-list, one directory per plugin — each expected to be that
+/// plugin project's own <c>dotnet publish</c> output). A later directory wins over an earlier one with the
+/// same kernel id, so a configured path can replace a bundled kernel during development.
 ///
 /// Every plugin loads into the default load context via <see cref="Assembly.LoadFrom"/>, which —
 /// specifically for this case — comes with .NET's own "LoadFrom context" dependency probing: an
@@ -27,7 +29,7 @@ namespace JupyterSharp.Engine;
 /// same-folder dependency resolution start failing with "operation is not legal in the current
 /// state" — evidence of the two dynamic-compilation engines interacting with custom
 /// AssemblyLoadContexts in a way not fully understood, not something to ship. A single shared load
-/// context is the simpler, correct-first choice for what this actually is: three specific plugins
+/// context is the simpler, correct-first choice for what this actually is: a handful of known plugins
 /// on one person's machine, not an untrusted multi-tenant plugin host — version conflicts between
 /// them are a real but much smaller risk than a host that intermittently fails to load a kernel.
 /// </summary>
@@ -58,24 +60,15 @@ public static class KernelPluginLoader
 
     private static IEnumerable<string> ResolvePluginDirectories(IEnumerable<string>? overridePaths)
     {
-        if (overridePaths is not null)
-        {
-            foreach (var path in overridePaths)
-                if (Directory.Exists(path)) yield return path;
-            yield break;
-        }
+        var bundledRoot = Path.Combine(AppContext.BaseDirectory, "kernels");
+        if (Directory.Exists(bundledRoot))
+            foreach (var directory in Directory.GetDirectories(bundledRoot).Order(StringComparer.Ordinal)) yield return directory;
 
-        var configured = Environment.GetEnvironmentVariable("JUPYTERSHARP_KERNEL_PATHS");
-        if (!string.IsNullOrWhiteSpace(configured))
-        {
-            foreach (var path in configured.Split(Path.PathSeparator, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
-                if (Directory.Exists(path)) yield return path;
-            yield break;
-        }
-
-        var defaultRoot = Path.Combine(AppContext.BaseDirectory, "kernels");
-        if (!Directory.Exists(defaultRoot)) yield break;
-        foreach (var directory in Directory.GetDirectories(defaultRoot)) yield return directory;
+        IEnumerable<string> configured = overridePaths
+            ?? (Environment.GetEnvironmentVariable("JUPYTERSHARP_KERNEL_PATHS") ?? "")
+                .Split(Path.PathSeparator, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        foreach (var path in configured)
+            if (Directory.Exists(path)) yield return path;
     }
 
     private static IKernelPlugin? LoadPlugin(string directory)
@@ -87,10 +80,35 @@ public static class KernelPluginLoader
         if (mainAssemblyPath is null) return null;
 
         RegisterNativeProbing(directory);
+        RegisterDependencyResolver(mainAssemblyPath);
         var assembly = Assembly.LoadFrom(mainAssemblyPath);
         var pluginType = assembly.GetTypes().FirstOrDefault(t =>
             typeof(IKernelPlugin).IsAssignableFrom(t) && t is { IsAbstract: false, IsInterface: false });
         return pluginType is null ? null : (IKernelPlugin)Activator.CreateInstance(pluginType)!;
+    }
+
+    private static readonly List<AssemblyDependencyResolver> Resolvers = new();
+    private static bool _resolvingHooked;
+
+    /// <summary>LoadFrom finds a plugin's managed dependencies only when they sit next to it. Assemblies that a package
+    /// ships per platform (<c>runtimes/&lt;rid&gt;/lib/...</c>, e.g. PowerShell's System.Management.Automation) are only known
+    /// to the plugin's own <c>.deps.json</c>: resolve them through it, still in the default load context.</summary>
+    private static void RegisterDependencyResolver(string mainAssemblyPath)
+    {
+        lock (Resolvers)
+        {
+            Resolvers.Add(new AssemblyDependencyResolver(mainAssemblyPath));
+            if (_resolvingHooked) return;
+            _resolvingHooked = true;
+            AssemblyLoadContext.Default.Resolving += (context, name) =>
+            {
+                AssemblyDependencyResolver[] resolvers;
+                lock (Resolvers) resolvers = Resolvers.ToArray();
+                foreach (var resolver in resolvers)
+                    if (resolver.ResolveAssemblyToPath(name) is { } path && File.Exists(path)) return context.LoadFromAssemblyPath(path);
+                return null;
+            };
+        }
     }
 
     private static readonly List<string> NativeDirectories = new();

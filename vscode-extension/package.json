@@ -34,10 +34,11 @@
     "languages": [
       { "id": "csharp", "extensions": [".cs"] },
       { "id": "fsharp", "extensions": [".fs"] },
+      { "id": "matsharp", "aliases": ["MatSharp"] },
+      { "id": "ndsharp", "aliases": ["NDSharp"] },
       { "id": "powerfx", "aliases": ["Power Fx"] },
-      { "id": "pysharp", "aliases": ["PySharp"] },
-      { "id": "ontly", "aliases": ["Ontly"] },
-      { "id": "ralf", "aliases": ["Ralf"] }
+      { "id": "powershell", "aliases": ["PowerShell"] },
+      { "id": "pysharp", "aliases": ["PySharp"] }
     ],
     "commands": [
       {

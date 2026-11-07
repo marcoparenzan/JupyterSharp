@@ -108,7 +108,7 @@ public class CSharpKernelConsoleAndPathTests
         try
         {
             File.WriteAllText(Path.Combine(folder.FullName, "helper.csx"), "var answer = 42;");
-            var session = new NotebookSession(notebookPath: Path.Combine(folder.FullName, "notebook.ipynb"));
+            var session = TestSessions.WithBundledKernels(notebookPath: Path.Combine(folder.FullName, "notebook.ipynb"));
             var sink = new TestSink();
 
             Assert.True(await session.ExecuteAsync("csharp", "#load \"helper.csx\"\nanswer", sink, default));
