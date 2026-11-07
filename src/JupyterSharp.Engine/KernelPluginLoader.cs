@@ -80,32 +80,44 @@ public static class KernelPluginLoader
         if (mainAssemblyPath is null) return null;
 
         RegisterNativeProbing(directory);
-        RegisterDependencyResolver(mainAssemblyPath);
         var assembly = Assembly.LoadFrom(mainAssemblyPath);
+        RegisterDependencyResolver(mainAssemblyPath);
         var pluginType = assembly.GetTypes().FirstOrDefault(t =>
             typeof(IKernelPlugin).IsAssignableFrom(t) && t is { IsAbstract: false, IsInterface: false });
         return pluginType is null ? null : (IKernelPlugin)Activator.CreateInstance(pluginType)!;
     }
 
     private static readonly List<AssemblyDependencyResolver> Resolvers = new();
+    private static readonly List<string> PluginDirectories = new();
     private static bool _resolvingHooked;
 
     /// <summary>LoadFrom finds a plugin's managed dependencies only when they sit next to it. Assemblies that a package
     /// ships per platform (<c>runtimes/&lt;rid&gt;/lib/...</c>, e.g. PowerShell's System.Management.Automation) are only known
-    /// to the plugin's own <c>.deps.json</c>: resolve them through it, still in the default load context.</summary>
+    /// to the plugin's own <c>.deps.json</c>: resolve them through it, still in the default load context.
+    /// This handler runs <i>before</i> .NET's own LoadFrom probing (the Resolving event comes first), so it must do what that probing does too:
+    /// a dependency that <c>deps.json</c> does not list (a project reference copied beside the plugin, such as MathemaSharp.Geometry) is looked for
+    /// in the plugin folders. Without that, an assembly loaded here is no longer "a LoadFrom assembly" and its own dependencies are not probed.</summary>
     private static void RegisterDependencyResolver(string mainAssemblyPath)
     {
         lock (Resolvers)
         {
             Resolvers.Add(new AssemblyDependencyResolver(mainAssemblyPath));
+            PluginDirectories.Add(Path.GetDirectoryName(mainAssemblyPath)!);
             if (_resolvingHooked) return;
             _resolvingHooked = true;
             AssemblyLoadContext.Default.Resolving += (context, name) =>
             {
                 AssemblyDependencyResolver[] resolvers;
-                lock (Resolvers) resolvers = Resolvers.ToArray();
+                string[] directories;
+                lock (Resolvers) { resolvers = Resolvers.ToArray(); directories = PluginDirectories.ToArray(); }
                 foreach (var resolver in resolvers)
                     if (resolver.ResolveAssemblyToPath(name) is { } path && File.Exists(path)) return context.LoadFromAssemblyPath(path);
+                if (name.Name is null) return null;
+                foreach (var directory in directories)
+                {
+                    var candidate = Path.Combine(directory, name.Name + ".dll");
+                    if (File.Exists(candidate)) return context.LoadFromAssemblyPath(candidate);
+                }
                 return null;
             };
         }

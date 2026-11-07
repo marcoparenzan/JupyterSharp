@@ -250,7 +250,12 @@ embedding application all get it for free):
   `host/kernels/*`, so it works without the setting. `jupytersharp kernels` and `JupyterSharp.Host --list-kernels` print the
   ids found. A plugin's managed dependencies that a package ships per platform (`runtimes/<rid>/lib`, e.g. PowerShell's
   `System.Management.Automation`) are resolved through the plugin's own `.deps.json` (`AssemblyDependencyResolver`), still in
-  the default load context.
+  the default load context. That handler is on `AssemblyLoadContext.Default.Resolving`, which .NET raises *before* the
+  `AppDomain.AssemblyResolve` event that implements the LoadFrom probing; an assembly it loads is therefore not a "LoadFrom
+  assembly", and its own dependencies are no longer probed in its folder. So the handler also looks, for a name `deps.json` does not
+  list (a project reference copied beside the plugin, for example `MathemaSharp.Geometry` for PySharp's plot kernel), in the plugin
+  folders. Found by the ecosystem gate (`ndsharp-contour-notebook`, `pysharp-notebooks`) on 2026-11-07, after a first version of the
+  handler passed the unit tests and the four shipped kernels; neither has a unit test, because they need published plugin folders.
 - **Loading**: `Assembly.LoadFrom(mainAssemblyPath)` — the one deliberately unglamorous choice
   here. `LoadFrom` comes with .NET's own "LoadFrom context" dependency probing: a dependency that
   can't otherwise be resolved is looked for beside the assembly that requested it, so everything

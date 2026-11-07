@@ -12,6 +12,8 @@
 - `jupytersharp kernels` and `JupyterSharp.Host --list-kernels` print the installed ids.
 - Removed `JupyterSharp.Protocol.KernelIds` and the extension's `KernelIds`; the extension reads its notebook languages from `package.json`, which
   `build/package-extension.ps1` regenerates from the packaged host. The package script also publishes `matsharp` and `ndsharp` (not run yet).
+- Plugin dependencies that a package ships per platform are resolved through the plugin's `.deps.json`, then by looking in the plugin folders (the second step is
+  needed because the handler runs before .NET's LoadFrom probing; without it PySharp's plot kernel failed to find `MathemaSharp.Geometry`).
 - Tests: 73/73 (7 new: the Engine references no kernel assembly, each plugin's id, the kernel list, unknown-kernel messages, the notebook path through the plugin).
 
 ## 0.3.1-net11-preview.4 — `#r "nuget:"` and top-level `using var` (packed to the local feed only, not published)
